@@ -17,4 +17,9 @@ export default defineConfig({
             },
         }),
     ],
+    resolve: {
+        alias: {
+            '@/Modules/Core': '/Modules/Core/resources/js', // <-- این خط را اضافه کنید
+        },
+    },
 });
