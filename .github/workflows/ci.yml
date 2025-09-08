@@ -1,0 +1,74 @@
+# .github/workflows/ci.yml
+name: CI
+
+# این اکشن چه زمانی اجرا شود؟
+on:
+  # برای هر پوش به شاخه‌های develop و main
+  push:
+    branches: [ "main", "develop" ]
+  # برای هر Pull Request به شاخه‌های develop و main
+  pull_request:
+    branches: [ "main", "develop" ]
+
+jobs:
+  # اولین جاب: اجرای تست‌ها
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # قدم اول: کد را از ریپازیتوری دانلود کن
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # قدم دوم: PHP را آماده کن
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, curl, libxml, mbstring, zip
+          tools: composer
+
+      # قدم سوم: فایل .env را بساز
+      - name: Copy .env
+        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+
+      # قدم چهارم: وابستگی‌های Composer را نصب کن
+      - name: Install Composer Dependencies
+        run: composer install --no-progress --prefer-dist --optimize-autoloader
+
+      # قدم پنجم: کلید اپلیکیشن را تولید کن
+      - name: Generate key
+        run: php artisan key:generate
+
+      # قدم ششم: دیتابیس SQLite برای تست بساز
+      - name: Create SQLite Database
+        run: |
+          mkdir -p database
+          touch database/database.sqlite
+
+      # قدم هفتم: تست‌ها را اجرا کن
+      - name: Run Pest Tests
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
+        run: php artisan test
+
+  # دومین جاب: بررسی استایل کد
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer
+
+      - name: Install Composer Dependencies
+        run: composer install --no-progress --prefer-dist --optimize-autoloader
+
+      # --dry-run فقط خطاها را نشان می‌دهد و فایل‌ها را تغییر نمی‌دهد
+      - name: Run PHP CS Fixer
+        run: ./vendor/bin/php-cs-fixer fix --dry-run --diff
