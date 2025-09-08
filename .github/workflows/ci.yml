@@ -69,6 +69,6 @@ jobs:
       - name: Install Composer Dependencies
         run: composer install --no-progress --prefer-dist --optimize-autoloader
 
-      # --dry-run فقط خطاها را نشان می‌دهد و فایل‌ها را تغییر نمی‌دهد -test
+      # --dry-run فقط خطاها را نشان می‌دهد و فایل‌ها را تغییر نمی‌دهد
       - name: Run PHP CS Fixer
         run: ./vendor/bin/php-cs-fixer fix --dry-run --diff
