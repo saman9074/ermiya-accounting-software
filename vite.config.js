@@ -1,17 +1,20 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
-import { glob } from 'glob'; // <-- ابزار glob را وارد می‌کنیم
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// یک آرایه از تمام فایل‌های app.js در ماژول‌ها و پوشه اصلی پیدا می‌کنیم
-const moduleInputs = glob.sync('Modules/*/resources/js/app.js');
-const mainInput = 'resources/js/app.js';
+// راه‌حل استاندارد برای به دست آوردن __dirname در ماژول‌های ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default defineConfig({
     plugins: [
         laravel({
-            // ورودی را به صورت دینامیک با تمام مسیرهای پیدا شده تنظیم می‌کنیم
-            input: [mainInput, ...moduleInputs],
+            input: [
+                'resources/js/app.js',
+                'Modules/**/resources/js/app.js',
+            ],
             refresh: true,
         }),
         vue({
@@ -25,9 +28,10 @@ export default defineConfig({
     ],
     resolve: {
         alias: {
-            // این بخش بدون تغییر باقی می‌ماند
-            '@/Modules/Core': '/Modules/Core/resources/js',
-            '@/Modules/Persons': '/Modules/Persons/resources/js',
+            '@': path.resolve(__dirname, 'resources/js'),
+            '@Core': path.resolve(__dirname, 'Modules/Core/resources/js'),
+            '@Persons': path.resolve(__dirname, 'Modules/Persons/resources/js'),
+            '@Inventory': path.resolve(__dirname, 'Modules/Inventory/resources/js'),
         },
     },
 });

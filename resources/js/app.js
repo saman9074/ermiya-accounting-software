@@ -15,24 +15,27 @@ createInertiaApp({
     title: (title) => `${title} - ${import.meta.env.VITE_APP_NAME || 'Laravel'}`,
 
     resolve: (name) => {
-        // 1) پشتیبانی از Persons::Index
+        let pagePath;
+
+        // 1) پشتیبانی از فرمت Module::Page
         if (name.includes('::')) {
-            const [module, page] = name.split('::'); // مثلا Persons::Index
-            const modulePage = Object.keys(pages).find(
+            const [module, page] = name.split('::');
+            pagePath = Object.keys(pages).find(
                 path => path.endsWith(`/Modules/${module}/resources/js/Pages/${page}.vue`)
             );
-
-            if (modulePage) {
-                return pages[modulePage]();
-            }
+        } else {
+            // 2) پشتیبانی از صفحات اصلی
+            pagePath = `./Pages/${name}.vue`;
         }
 
-        // 2) صفحات اصلی
-        if (pages[`./Pages/${name}.vue`]) {
-            return pages[`./Pages/${name}.vue`];
+        const page = pages[pagePath];
+
+        if (!page) {
+            throw new Error(`Page not found: ${name}`);
         }
 
-        throw new Error(`Page not found: ${name}`);
+        // تابع را اجرا کن تا کامپوننت بارگذاری شود
+        return page();
     },
 
     setup({ el, App, props, plugin }) {

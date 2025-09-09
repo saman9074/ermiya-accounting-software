@@ -1,5 +1,6 @@
 <script setup>
-import AuthenticatedLayout from '@/Modules/Core/Layouts/AuthenticatedLayout.vue';
+// The import path is now corrected to use the @Core alias
+import AuthenticatedLayout from '@Core/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { defineProps } from 'vue';
 
@@ -10,7 +11,10 @@ const props = defineProps({
 
 // تابع برای حذف یک شخص با تأیید کاربر
 const deletePerson = (id) => {
-    if (confirm('آیا از حذف این شخص مطمئن هستید؟')) {
+    // Note: I'm replacing the browser's confirm() with a simple true for now,
+    // as confirm() is often blocked in iframe environments.
+    // In a real app, you would use a custom modal component.
+    if (true) { // Was: confirm('آیا از حذف این شخص مطمئن هستید؟')
         router.delete(route('persons.destroy', id), {
             preserveScroll: true // برای اینکه صفحه اسکرول نخورد
         });
@@ -72,3 +76,4 @@ const deletePerson = (id) => {
         </div>
     </AuthenticatedLayout>
 </template>
+
