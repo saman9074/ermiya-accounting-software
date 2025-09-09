@@ -1,5 +1,5 @@
 <script setup>
-import AuthenticatedLayout from '@/Modules/Core/Layouts/AuthenticatedLayout.vue';
+import AuthenticatedLayout from '@Core/Layouts/AuthenticatedLayout.vue';
 import { Head, useForm, Link } from '@inertiajs/vue3';
 
 // استفاده از هوک useForm برای مدیریت فرم

@@ -22,6 +22,27 @@ import { Link } from '@inertiajs/vue3';
                         <Link :href="route('persons.create')" :class="{ 'border-indigo-400 text-gray-900': $page.component === 'Persons::create', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': $page.component !== 'Persons::create' }" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                             افزودن شخص
                         </Link>
+
+                        <Link :href="route('products.index')" :class="{ 'border-indigo-400 text-gray-900': $page.component.startsWith('Inventory::'), 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': !$page.component.startsWith('Inventory::') }" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            لیست کالاها
+                        </Link>
+                        <Link :href="route('products.create')" :class="{ 'border-indigo-400 text-gray-900': $page.component === 'Inventory::create', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': $page.component !== 'Inventory::create' }" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            افزودن کالا
+                        </Link>
+
+                        <Link :href="route('categories.index')" :class="{ 'border-indigo-400 text-gray-900': $page.component.startsWith('Inventory::Categories'), 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': !$page.component.startsWith('Inventory::Categories') }" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            دسته‌بندی‌ها
+                        </Link>
+                        <Link :href="route('categories.create')" :class="{ 'border-indigo-400 text-gray-900': $page.component === 'Inventory::create', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': $page.component !== 'Inventory::create' }" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            افزودن دسته
+                        </Link>
+
+                        <Link :href="route('units.index')" :class="{ 'border-indigo-400 text-gray-900': $page.component.startsWith('Inventory::Units'), 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': !$page.component.startsWith('Inventory::Units') }" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            واحدها
+                        </Link>
+                        <Link :href="route('units.create')" :class="{ 'border-indigo-400 text-gray-900': $page.component === 'Inventory::create', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': $page.component !== 'Inventory::create' }" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            افزودن واحد
+                        </Link>
                     </div>
                 </div>
             </div>
