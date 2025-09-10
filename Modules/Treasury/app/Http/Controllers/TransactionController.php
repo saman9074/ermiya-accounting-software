@@ -9,26 +9,57 @@ use Modules\Sales\Models\Invoice;
 use Modules\Treasury\Models\Transaction;
 use Modules\Treasury\Models\Account;
 use Inertia\Inertia;
+use Modules\Core\Rules\DateWithinFinancialYear;
+
 class TransactionController extends Controller
 {
 
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        $transactions = Transaction::with(['account', 'transactionable'])
-            ->latest()
-            ->get();
-
         return Inertia::render('Treasury::Transactions/Index', [
-            'transactions' => $transactions,
+            'transactions' => Transaction::with(['account', 'transactionable'])->orderBy('transaction_date', 'desc')->get(),
         ]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
+    public function store(Request $request)
+    {
+        $invoice = Invoice::findOrFail($request->input('invoice_id'));
+
+        $request->validate([
+            'account_id' => 'required|exists:accounts,id',
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:' . $invoice->remaining_amount],
+            'transaction_date' => ['required', 'date', new DateWithinFinancialYear], // <-- از قانون جدید استفاده می‌کنیم
+            'invoice_id' => 'required|exists:invoices,id',
+            'description' => 'nullable|string',
+        ]);
+
+        DB::transaction(function () use ($request, $invoice) {
+            // 1. Create the transaction record
+            $transaction = $invoice->transactions()->create([
+                'account_id' => $request->input('account_id'),
+                'amount' => $request->input('amount'),
+                'type' => 'income',
+                'transaction_date' => $request->input('transaction_date'),
+                'description' => $request->input('description'),
+            ]);
+
+            // 2. Update the account's current balance
+            $account = Account::find($request->input('account_id'));
+            $account->increment('current_balance', $transaction->amount);
+
+            // 3. Update the invoice's paid amount and status
+            $invoice->increment('paid_amount', $transaction->amount);
+            if ($invoice->paid_amount >= $invoice->total_amount) {
+                $invoice->payment_status = 'paid';
+            } else {
+                $invoice->payment_status = 'partial';
+            }
+            $invoice->save();
+        });
+
+        return redirect()->route('invoices.show', $invoice)->with('success', 'دریافت وجه با موفقیت ثبت شد.');
+    }
+
     public function edit(Transaction $transaction)
     {
         return Inertia::render('Treasury::Transactions/Edit', [
@@ -37,101 +68,72 @@ class TransactionController extends Controller
         ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Transaction $transaction)
     {
-        // For MVP, we keep it simple. A full implementation would handle
-        // reverting old amounts and applying new ones to accounts and invoices.
         $validated = $request->validate([
             'account_id' => 'required|exists:accounts,id',
             'amount' => 'required|numeric|min:0.01',
-            'transaction_date' => 'required|date',
+            'transaction_date' => ['required', 'date', new DateWithinFinancialYear], // <-- از قانون جدید استفاده می‌کنیم
             'description' => 'nullable|string',
         ]);
 
-        $transaction->update($validated);
+        DB::transaction(function () use ($request, $validated, $transaction) {
+            $oldAmount = $transaction->amount;
+            $oldAccount = $transaction->account;
 
-        // A full implementation requires recalculating invoice and account balances.
+            $newAmount = $validated['amount'];
+            $newAccount = Account::find($validated['account_id']);
+
+            // Reverse the old transaction's effect
+            $oldAccount->decrement('current_balance', $oldAmount);
+            if ($transaction->transactionable_type === Invoice::class) {
+                $transaction->transactionable->decrement('paid_amount', $oldAmount);
+            }
+
+            // Apply the new transaction's effect
+            $newAccount->increment('current_balance', $newAmount);
+            if ($transaction->transactionable_type === Invoice::class) {
+                $transaction->transactionable->increment('paid_amount', $newAmount);
+                $transaction->transactionable->payment_status = $transaction->transactionable->paid_amount >= $transaction->transactionable->total_amount ? 'paid' : 'partial';
+                if ($transaction->transactionable->paid_amount <= 0) {
+                    $transaction->transactionable->payment_status = 'unpaid';
+                }
+                $transaction->transactionable->save();
+            }
+
+            // Update the transaction itself
+            $transaction->update($validated);
+        });
 
         return redirect()->route('transactions.index')->with('success', 'تراکنش با موفقیت ویرایش شد.');
     }
 
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Transaction $transaction)
     {
         DB::transaction(function () use ($transaction) {
-            // 1. Revert the financial impact on the account
+            // Reverse the financial effects before deleting
             $account = $transaction->account;
-            if ($transaction->type === 'income') {
-                $account->current_balance -= $transaction->amount;
-            } else {
-                $account->current_balance += $transaction->amount;
-            }
-            $account->save();
+            $account->decrement('current_balance', $transaction->amount);
 
-            // 2. Revert the impact on the related model (e.g., Invoice)
             if ($transaction->transactionable_type === Invoice::class) {
                 $invoice = $transaction->transactionable;
-                $invoice->paid_amount -= $transaction->amount;
+                $invoice->decrement('paid_amount', $transaction->amount);
 
-                if ($invoice->paid_amount <= 0) {
-                    $invoice->payment_status = 'unpaid';
-                } else {
+                // Update invoice status after reversal
+                if ($invoice->paid_amount >= $invoice->total_amount) {
+                    $invoice->payment_status = 'paid';
+                } elseif ($invoice->paid_amount > 0 && $invoice->paid_amount < $invoice->total_amount) {
                     $invoice->payment_status = 'partial';
+                } else {
+                    $invoice->payment_status = 'unpaid';
                 }
                 $invoice->save();
             }
 
-            // 3. Delete the transaction itself
             $transaction->delete();
         });
 
         return redirect()->route('transactions.index')->with('success', 'تراکنش با موفقیت حذف شد.');
-    }
-
-    /**
-     * Store a newly created transaction for a sales invoice.
-     */
-    public function storeForInvoice(Request $request, Invoice $invoice)
-    {
-        $validated = $request->validate([
-            'account_id' => 'required|exists:accounts,id',
-            'amount' => 'required|numeric|min:0.01|max:' . $invoice->remaining_amount,
-            'transaction_date' => 'required|date',
-            'description' => 'nullable|string',
-        ]);
-
-        DB::transaction(function () use ($validated, $invoice) {
-            // 1. Create the transaction
-            $invoice->transactions()->create([
-                'account_id' => $validated['account_id'],
-                'amount' => $validated['amount'],
-                'type' => 'income',
-                'transaction_date' => $validated['transaction_date'],
-                'description' => $validated['description'],
-            ]);
-
-            // 2. Update invoice status
-            $invoice->paid_amount += $validated['amount'];
-            if ($invoice->paid_amount >= $invoice->total_amount) {
-                $invoice->payment_status = 'paid';
-            } else {
-                $invoice->payment_status = 'partial';
-            }
-            $invoice->save();
-
-            // 3. UPDATE THE ACCOUNT BALANCE (The Fix!)
-            $account = Account::find($validated['account_id']);
-            $account->current_balance += $validated['amount'];
-            $account->save();
-        });
-
-        return redirect()->route('invoices.show', $invoice)
-            ->with('success', 'دریافت وجه با موفقیت ثبت شد.');
     }
 }

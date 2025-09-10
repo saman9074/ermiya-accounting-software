@@ -11,11 +11,16 @@ const props = defineProps({
 const emit = defineEmits(['close']);
 
 const form = useForm({
-    account_id: props.accounts.length ? props.accounts[0].id : null,
-    amount: 0,
-    transaction_date: new Date().toISOString().slice(0, 10),
-    description: '',
+    invoice_id: props.invoice.id,
+    account_id: props.accounts.length > 0 ? props.accounts[0].id : null,
+    amount: props.invoice.remaining_amount,
+    transaction_date: new Date().toISOString().slice(0, 10), // Today's date
+    description: `پرداخت بابت فاکتور شماره ${props.invoice.id}`,
 });
+
+const closeModal = () => {
+    emit('close');
+};
 
 const remainingAmount = computed(() => {
     return props.invoice.total_amount - props.invoice.paid_amount;
@@ -29,10 +34,11 @@ watch(() => props.show, (newVal) => {
 });
 
 const submit = () => {
-    form.post(route('invoices.transactions.store', props.invoice.id), {
+    // Use the NEW route name to submit the form
+    form.post(route('invoices.transactions.store'), {
         preserveScroll: true,
         onSuccess: () => {
-            emit('close');
+            closeModal();
             form.reset();
         },
     });

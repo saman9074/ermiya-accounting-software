@@ -81,6 +81,11 @@ const sidebarOpen = ref(false);
                 <Link :href="route('transactions.index')" :class="['sidebar-item', { 'active': $page.component.startsWith('Treasury::Transactions') }]">
                     <span>لیست تراکنش‌ها</span>
                 </Link>
+
+                <p class="px-3 pt-4 pb-2 text-xs font-semibold uppercase text-white/50">تنظیمات</p>
+                <Link :href="route('financial-years.index')" :class="['sidebar-item', { 'active': $page.component.startsWith('Core::FinancialYears') }]">
+                    <span>سال مالی</span>
+                </Link>
             </nav>
         </aside>
 

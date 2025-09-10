@@ -9,42 +9,34 @@ use Inertia\Inertia;
 use Modules\Inventory\Models\Product;
 use Modules\Persons\Models\Person;
 use Modules\Sales\Models\Invoice;
-use Modules\Sales\Models\InvoiceItem;
 use Modules\Treasury\Models\Account;
+use Modules\Core\Rules\DateWithinFinancialYear;
 
 class SalesController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
-{
-    return Inertia::render('Sales::Invoices/Index', [
-        'invoices' => Invoice::with('person')->latest()->get(),
-        // Pass the success message from the session to the view
-        'success' => session('success'),
-    ]);
-}
+    {
+        $invoices = Invoice::with('person')->orderBy('invoice_date', 'desc')->get();
+        return Inertia::render('Sales::Invoices/Index', [
+            'invoices' => $invoices,
+            'success' => session('success'),
+        ]);
+    }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
-{
-    return Inertia::render('Sales::Invoices/Create', [
-        'persons' => Person::all(['id', 'name']),
-        'products' => Product::all(['id', 'name', 'sale_price']),
-    ]);
-}
+    {
+        return Inertia::render('Sales::Invoices/Create', [
+            'persons' => Person::all(),
+            'products' => Product::all(),
+        ]);
+    }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
             'person_id' => 'required|exists:persons,id',
-            'invoice_date' => 'required|date',
+            'invoice_date' => ['required', 'date', new DateWithinFinancialYear],
+            'due_date' => 'nullable|date|after_or_equal:invoice_date',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|numeric|min:1',
@@ -52,38 +44,36 @@ class SalesController extends Controller
         ]);
 
         DB::transaction(function () use ($validated) {
-            $totalAmount = 0;
-            foreach ($validated['items'] as $itemData) {
-                $totalAmount += $itemData['quantity'] * $itemData['unit_price'];
-            }
+            $totalAmount = collect($validated['items'])->sum(function ($item) {
+                return $item['quantity'] * $item['unit_price'];
+            });
 
             $invoice = Invoice::create([
                 'person_id' => $validated['person_id'],
                 'invoice_date' => $validated['invoice_date'],
+                // Use null coalescing operator to handle optional due_date
+                'due_date' => $validated['due_date'] ?? null,
                 'total_amount' => $totalAmount,
             ]);
 
-            foreach ($validated['items'] as $itemData) {
-                // *** FIX: Calculate and add total_price for each item ***
+            foreach ($validated['items'] as $item) {
                 $invoice->items()->create([
-                    'product_id' => $itemData['product_id'],
-                    'quantity' => $itemData['quantity'],
-                    'unit_price' => $itemData['unit_price'],
-                    'total_price' => $itemData['quantity'] * $itemData['unit_price'],
+                    'product_id' => $item['product_id'],
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $item['unit_price'],
+                    'total_price' => $item['quantity'] * $item['unit_price'],
                 ]);
             }
         });
 
-        return redirect()->route('invoices.index')
-            ->with('success', 'فاکتور جدید با موفقیت صادر شد.');
+        return redirect()->route('invoices.index')->with('success', 'فاکتور جدید با موفقیت صادر شد.');
     }
 
     public function show(Invoice $invoice)
     {
         return Inertia::render('Sales::Invoices/Show', [
-            'invoice' => $invoice->load('person', 'items.product'),
-            'accounts' => Account::all(), // <-- Pass accounts to the view
-            'success' => session('success'),
+            'invoice' => $invoice->load('items.product', 'person'),
+            'accounts' => Account::all(),
         ]);
     }
 }
