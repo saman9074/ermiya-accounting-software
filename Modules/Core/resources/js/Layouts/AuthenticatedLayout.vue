@@ -75,8 +75,11 @@ const sidebarOpen = ref(false);
                     <span>فاکتور ها</span>
                 </Link>
 
-                <Link :href="route('accounts.index')" :class="['sidebar-item', { 'active': $page.component.startsWith('Treasury::') }]">
+                <Link :href="route('accounts.index')" :class="['sidebar-item', { 'active': $page.component.startsWith('Treasury::Accounts') }]">
                     <span>حساب ها</span>
+                </Link>
+                <Link :href="route('transactions.index')" :class="['sidebar-item', { 'active': $page.component.startsWith('Treasury::Transactions') }]">
+                    <span>لیست تراکنش‌ها</span>
                 </Link>
             </nav>
         </aside>

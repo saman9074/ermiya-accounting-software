@@ -22,8 +22,10 @@ class Account extends Model
         'name',
         'type',
         'initial_balance',
+        'current_balance',
         'description',
     ];
+
 
     /**
      * The attributes that should be cast.
@@ -32,5 +34,6 @@ class Account extends Model
      */
     protected $casts = [
         'initial_balance' => 'decimal:2',
+        'current_balance' => 'decimal:2',
     ];
 }
