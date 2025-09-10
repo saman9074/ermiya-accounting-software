@@ -2,5 +2,6 @@
     "Core": true,
     "Persons": true,
     "Inventory": true,
-    "Sales": true
+    "Sales": true,
+    "Treasury": true
 }
