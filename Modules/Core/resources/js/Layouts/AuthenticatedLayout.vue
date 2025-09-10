@@ -71,9 +71,9 @@ const sidebarOpen = ref(false);
                 </Link>
 
                 <p class="px-3 pt-4 pb-2 text-xs font-semibold uppercase text-white/50">عملیات</p>
-<!--                <Link :href="route('invoices.create')" :class="['sidebar-item', { 'active': $page.component.startsWith('Sales::') }]">-->
-<!--                    <span>صدور فاکتور</span>-->
-<!--                </Link>-->
+                <Link :href="route('invoices.index')" :class="['sidebar-item', { 'active': $page.component.startsWith('Sales::') }]">
+                    <span>فاکتور ها</span>
+                </Link>
             </nav>
         </aside>
 

@@ -1,5 +1,6 @@
 {
     "Core": true,
     "Persons": true,
-    "Inventory": true
+    "Inventory": true,
+    "Sales": true
 }

@@ -32,6 +32,7 @@ export default defineConfig({
             '@Core': path.resolve(__dirname, 'Modules/Core/resources/js'),
             '@Persons': path.resolve(__dirname, 'Modules/Persons/resources/js'),
             '@Inventory': path.resolve(__dirname, 'Modules/Inventory/resources/js'),
+            '@Sales': path.resolve(__dirname, 'Modules/Sales/resources/js'),
         },
     },
 });
