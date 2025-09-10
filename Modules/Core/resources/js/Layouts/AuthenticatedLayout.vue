@@ -1,63 +1,90 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import { Link, usePage } from '@inertiajs/vue3';
+import ApplicationLogo from '@Core/Components/ApplicationLogo.vue'; // <-- Import the new component
+
+// State for mobile sidebar
+const sidebarOpen = ref(false);
+
 </script>
 
 <template>
-    <div class="min-h-screen bg-gray-100">
-        <!-- Navigation Bar -->
-        <nav class="bg-white border-b border-gray-100 shadow-sm">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-start h-16">
-                    <div class="flex items-center">
-                        <span class="font-bold text-lg">حسابداری اِرمیا</span>
+    <div class="min-h-screen bg-brand-bg text-slate-800">
+        <!-- Header -->
+        <header class="fixed inset-x-0 top-0 z-40 bg-brand-header text-white shadow-md">
+            <div class="mx-auto flex h-16 max-w-full items-center justify-between px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center gap-3">
+                    <!-- Mobile Menu Button -->
+                    <button @click="sidebarOpen = !sidebarOpen" class="flex h-10 w-10 items-center justify-center rounded-md hover:bg-white/10 md:hidden" aria-label="Toggle menu">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-6 w-6"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                    </button>
+                    <!-- Logo and Title -->
+                    <Link :href="route('dashboard')" class="flex items-center gap-3">
+                        <div class="h-10 w-10 rounded-md bg-white/10 p-1.5">
+                            <ApplicationLogo />
+                        </div>
+                        <div class="leading-tight">
+                            <div class="text-xs/6 opacity-90">سامانه</div>
+                            <div class="text-lg font-semibold tracking-tight">نرم‌افزار حسابداری</div>
+                        </div>
+                    </Link>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <!-- Search Bar -->
+                    <div class="hidden sm:block">
+                        <label class="relative block">
+                            <input aria-label="جستجو" placeholder="جستجو..." class="w-60 rounded-md border border-white/10 bg-white/5 py-2 pr-10 pl-3 text-sm placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/20" />
+                            <svg class="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-white/70" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 21l-4.35-4.35" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="11" r="6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </label>
                     </div>
-                    <!-- Navigation Links -->
-                    <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                        <Link :href="route('dashboard')" :class="{ 'border-indigo-400 text-gray-900': $page.component === 'Core::Dashboard', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': $page.component !== 'Core::Dashboard' }" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                            داشبورد
-                        </Link>
-                        <Link :href="route('persons.index')" :class="{ 'border-indigo-400 text-gray-900': $page.component.startsWith('Persons::'), 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': !$page.component.startsWith('Persons::') }" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                            لیست اشخاص
-                        </Link>
-                        <Link :href="route('persons.create')" :class="{ 'border-indigo-400 text-gray-900': $page.component === 'Persons::create', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': $page.component !== 'Persons::create' }" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                            افزودن شخص
-                        </Link>
-
-                        <Link :href="route('products.index')" :class="{ 'border-indigo-400 text-gray-900': $page.component.startsWith('Inventory::'), 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': !$page.component.startsWith('Inventory::') }" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                            لیست کالاها
-                        </Link>
-                        <Link :href="route('products.create')" :class="{ 'border-indigo-400 text-gray-900': $page.component === 'Inventory::create', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': $page.component !== 'Inventory::create' }" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                            افزودن کالا
-                        </Link>
-
-                        <Link :href="route('categories.index')" :class="{ 'border-indigo-400 text-gray-900': $page.component.startsWith('Inventory::Categories'), 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': !$page.component.startsWith('Inventory::Categories') }" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                            دسته‌بندی‌ها
-                        </Link>
-                        <Link :href="route('categories.create')" :class="{ 'border-indigo-400 text-gray-900': $page.component === 'Inventory::create', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': $page.component !== 'Inventory::create' }" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                            افزودن دسته
-                        </Link>
-
-                        <Link :href="route('units.index')" :class="{ 'border-indigo-400 text-gray-900': $page.component.startsWith('Inventory::Units'), 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': !$page.component.startsWith('Inventory::Units') }" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                            واحدها
-                        </Link>
-                        <Link :href="route('units.create')" :class="{ 'border-indigo-400 text-gray-900': $page.component === 'Inventory::create', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': $page.component !== 'Inventory::create' }" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                            افزودن واحد
-                        </Link>
+                    <!-- User Profile -->
+                    <div class="flex items-center gap-2 rounded-full bg-white/10 px-2 py-1">
+                        <div class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sm font-bold">
+                            {{ $page.props.auth.user.name.substring(0, 2) }}
+                        </div>
+                        <span class="hidden text-sm font-medium sm:block">{{ $page.props.auth.user.name }}</span>
                     </div>
                 </div>
             </div>
-        </nav>
-
-        <!-- Page Heading -->
-        <header v-if="$slots.header" class="bg-white shadow">
-            <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                <slot name="header" />
-            </div>
         </header>
 
-        <!-- Page Content -->
-        <main>
-            <slot />
+        <!-- Sidebar (Right) -->
+        <aside :class="['fixed top-16 bottom-0 right-0 z-30 w-64 transform bg-brand-header text-white shadow-xl transition-transform duration-300 md:translate-x-0', { 'translate-x-0': sidebarOpen, 'translate-x-full': !sidebarOpen }]" aria-label="Main Navigation">
+            <nav class="flex h-full flex-col gap-1.5 overflow-y-auto p-4">
+                <Link :href="route('dashboard')" :class="['sidebar-item', { 'active': $page.component.startsWith('Core::') }]">
+                    <span>داشبورد</span>
+                </Link>
+
+                <p class="px-3 pt-4 pb-2 text-xs font-semibold uppercase text-white/50">مدیریت</p>
+                <Link :href="route('persons.index')" :class="['sidebar-item', { 'active': $page.component.startsWith('Persons::') }]">
+                    <span>اشخاص</span>
+                </Link>
+                <Link :href="route('products.index')" :class="['sidebar-item', { 'active': $page.component.startsWith('Inventory::Products') }]">
+                    <span>کالاها</span>
+                </Link>
+                <Link :href="route('categories.index')" :class="['sidebar-item', { 'active': $page.component.startsWith('Inventory::Categories') }]">
+                    <span>دسته‌بندی‌ها</span>
+                </Link>
+                <Link :href="route('units.index')" :class="['sidebar-item', { 'active': $page.component.startsWith('Inventory::Units') }]">
+                    <span>واحدها</span>
+                </Link>
+
+                <p class="px-3 pt-4 pb-2 text-xs font-semibold uppercase text-white/50">عملیات</p>
+<!--                <Link :href="route('invoices.create')" :class="['sidebar-item', { 'active': $page.component.startsWith('Sales::') }]">-->
+<!--                    <span>صدور فاکتور</span>-->
+<!--                </Link>-->
+            </nav>
+        </aside>
+
+        <!-- Sidebar backdrop for mobile -->
+        <div v-show="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 z-20 bg-black/30 backdrop-blur-sm md:hidden" />
+
+        <!-- Main content -->
+        <main class="pt-16 md:pr-64">
+            <div class="p-4 sm:p-6 lg:p-8">
+                <slot />
+            </div>
         </main>
     </div>
 </template>

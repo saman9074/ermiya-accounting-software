@@ -8,12 +8,22 @@ export default {
         './storage/framework/views/*.php',
         './resources/views/**/*.blade.php',
         './resources/js/**/*.vue',
+        './Modules/**/resources/js/**/*.vue',
     ],
 
     theme: {
         extend: {
+            colors: {
+                brand: {
+                    header: '#1E3A8A',
+                    accent: '#3B82F6',
+                    bg: '#F3F4F6',
+                    positive: '#10B981',
+                    danger: '#EF4444',
+                },
+            },
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['Vazirmatn', ...defaultTheme.fontFamily.sans],
             },
         },
     },

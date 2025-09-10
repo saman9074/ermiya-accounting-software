@@ -1,3 +1,37 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+    --brand-header: #1E3A8A;
+    --brand-accent: #3B82F6;
+    --brand-bg: #F3F4F6;
+    --brand-positive: #10B981;
+    --brand-danger: #EF4444;
+}
+
+@layer components {
+    .btn-primary {
+        @apply inline-flex items-center justify-center rounded-lg bg-gradient-to-br from-[var(--brand-accent)] to-[#2563EB] px-4 py-2 text-sm font-medium text-white shadow-md transition transform hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed;
+    }
+
+    .card {
+        @apply rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/5 overflow-hidden;
+    }
+
+    .sidebar-item {
+        @apply flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors;
+    }
+    .sidebar-item:hover { @apply bg-white/10; }
+    .sidebar-item.active { @apply bg-white/20 font-bold; }
+
+    .badge-success {
+        @apply inline-flex items-center rounded-full bg-[rgba(16,185,129,0.1)] px-2.5 py-0.5 text-xs font-medium text-[var(--brand-positive)];
+    }
+    .badge-danger {
+        @apply inline-flex items-center rounded-full bg-[rgba(239,68,68,0.1)] px-2.5 py-0.5 text-xs font-medium text-[var(--brand-danger)];
+    }
+    .badge-warning {
+        @apply inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800;
+    }
+}
