@@ -36,7 +36,7 @@ const formatCurrency = (amount) => {
                 <tr>
                     <th class="px-4 py-2 text-right text-xs font-medium text-slate-500 uppercase">نام حساب</th>
                     <th class="px-4 py-2 text-right text-xs font-medium text-slate-500 uppercase">نوع</th>
-                    <th class="px-4 py-2 text-right text-xs font-medium text-slate-500 uppercase">موجودی اولیه</th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-slate-500 uppercase">موجودی فعلی</th>
                     <th class="px-4 py-2 text-right text-xs font-medium text-slate-500 uppercase">عملیات</th>
                 </tr>
                 </thead>
@@ -44,7 +44,7 @@ const formatCurrency = (amount) => {
                 <tr v-for="account in accounts" :key="account.id">
                     <td class="whitespace-nowrap px-4 py-3 text-sm">{{ account.name }}</td>
                     <td class="whitespace-nowrap px-4 py-3 text-sm">{{ account.type === 'cash' ? 'صندوق' : 'بانک' }}</td>
-                    <td class="whitespace-nowrap px-4 py-3 text-sm">{{ formatCurrency(account.initial_balance) }} تومان</td>
+                    <td class="whitespace-nowrap px-4 py-3 text-sm font-semibold">{{ formatCurrency(account.current_balance) }} تومان</td>
                     <td class="whitespace-nowrap px-4 py-3 text-sm">
                         <Link :href="route('accounts.edit', account.id)" class="text-indigo-600 hover:text-indigo-900 mx-2">ویرایش</Link>
                         <button @click="deleteAccount(account.id)" class="text-red-600 hover:text-red-900 mx-2">حذف</button>
@@ -58,3 +58,4 @@ const formatCurrency = (amount) => {
         </div>
     </AuthenticatedLayout>
 </template>
+

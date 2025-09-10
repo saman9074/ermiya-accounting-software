@@ -10,6 +10,8 @@ use Modules\Inventory\Models\Product;
 use Modules\Persons\Models\Person;
 use Modules\Sales\Models\Invoice;
 use Modules\Sales\Models\InvoiceItem;
+use Modules\Treasury\Models\Account;
+
 class SalesController extends Controller
 {
     /**
@@ -78,8 +80,10 @@ class SalesController extends Controller
 
     public function show(Invoice $invoice)
     {
-        // Eager load relationships for display
-        $invoice->load(['person', 'items.product']);
-        return Inertia::render('Sales::Invoices/Show', compact('invoice'));
+        return Inertia::render('Sales::Invoices/Show', [
+            'invoice' => $invoice->load('person', 'items.product'),
+            'accounts' => Account::all(), // <-- Pass accounts to the view
+            'success' => session('success'),
+        ]);
     }
 }

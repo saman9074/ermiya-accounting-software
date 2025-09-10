@@ -39,6 +39,9 @@ class TreasuryController extends Controller
             'description' => 'nullable|string',
         ]);
 
+        // Set current_balance to initial_balance on creation
+        $validated['current_balance'] = $validated['initial_balance'];
+
         Account::create($validated);
 
         return redirect()->route('accounts.index')
