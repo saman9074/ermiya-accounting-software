@@ -9,7 +9,7 @@ Route::middleware('auth')->group(function() {
     Route::resource('accounts', TreasuryController::class)->except(['show']);
 
     // Route for storing a new payment for an invoice
-    Route::post('invoices/{invoice}/transactions', [TransactionController::class, 'storeForInvoice'])->name('invoices.transactions.store');
+    Route::post('invoices/transactions', [TransactionController::class, 'store'])->name('invoices.transactions.store');
 
     // Routes for managing transactions
     Route::resource('transactions', TransactionController::class)->only(['index', 'edit', 'update', 'destroy']);
