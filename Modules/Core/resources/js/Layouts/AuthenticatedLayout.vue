@@ -1,10 +1,17 @@
 <script setup>
 import { ref } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import ApplicationLogo from '@Core/Components/ApplicationLogo.vue'; // <-- Import the new component
+import ApplicationLogo from '@Core/Components/ApplicationLogo.vue';
 
 // State for mobile sidebar
 const sidebarOpen = ref(false);
+
+const page = usePage();
+
+// Helper function to determine if a link is active based on the component name prefix
+const isActive = (prefix) => {
+    return page.component.startsWith(prefix);
+};
 
 </script>
 
@@ -20,12 +27,12 @@ const sidebarOpen = ref(false);
                     </button>
                     <!-- Logo and Title -->
                     <Link :href="route('dashboard')" class="flex items-center gap-3">
-                        <div class="h-10 w-10 rounded-md bg-white/10 p-1.5">
+                        <div class="h-10 w-10 rounded-md bg-white/10 p-1.5 text-white">
                             <ApplicationLogo />
                         </div>
                         <div class="leading-tight">
-                            <div class="text-xs/6 opacity-90">سامانه</div>
-                            <div class="text-lg font-semibold tracking-tight">نرم‌افزار حسابداری</div>
+                            <div class="text-xs/6 opacity-90">نرم افزار حسابداری</div>
+                            <div class="text-lg font-semibold tracking-tight">ارمیا Ermiya</div>
                         </div>
                     </Link>
                 </div>
@@ -50,42 +57,45 @@ const sidebarOpen = ref(false);
         </header>
 
         <!-- Sidebar (Right) -->
-        <aside :class="['fixed top-16 bottom-0 right-0 z-30 w-64 transform bg-brand-header text-white shadow-xl transition-transform duration-300 md:translate-x-0', { 'translate-x-0': sidebarOpen, 'translate-x-full': !sidebarOpen }]" aria-label="Main Navigation">
+        <aside :class="['fixed top-16 bottom-0 right-0 z-30 w-64 transform bg-brand-header text-white shadow-xl transition-transform duration-300 md:translate-x-0', { 'translate-x-0': sidebarOpen, 'translate-x-full md:translate-x-0': !sidebarOpen }]" aria-label="Main Navigation">
             <nav class="flex h-full flex-col gap-1.5 overflow-y-auto p-4">
-                <Link :href="route('dashboard')" :class="['sidebar-item', { 'active': $page.component.startsWith('Core::') }]">
+                <Link :href="route('dashboard')" :class="['sidebar-item', { 'active': isActive('Core::Dashboard') }]">
                     <span>داشبورد</span>
                 </Link>
 
                 <p class="px-3 pt-4 pb-2 text-xs font-semibold uppercase text-white/50">مدیریت</p>
-                <Link :href="route('persons.index')" :class="['sidebar-item', { 'active': $page.component.startsWith('Persons::') }]">
+                <Link :href="route('persons.index')" :class="['sidebar-item', { 'active': isActive('Persons::') }]">
                     <span>اشخاص</span>
                 </Link>
-                <Link :href="route('products.index')" :class="['sidebar-item', { 'active': $page.component.startsWith('Inventory::Products') }]">
+                <Link :href="route('products.index')" :class="['sidebar-item', { 'active': isActive('Inventory::Products') }]">
                     <span>کالاها</span>
                 </Link>
-                <Link :href="route('categories.index')" :class="['sidebar-item', { 'active': $page.component.startsWith('Inventory::Categories') }]">
+                <Link :href="route('categories.index')" :class="['sidebar-item', { 'active': isActive('Inventory::Categories') }]">
                     <span>دسته‌بندی‌ها</span>
                 </Link>
-                <Link :href="route('units.index')" :class="['sidebar-item', { 'active': $page.component.startsWith('Inventory::Units') }]">
+                <Link :href="route('units.index')" :class="['sidebar-item', { 'active': isActive('Inventory::Units') }]">
                     <span>واحدها</span>
+                </Link>
+                <Link :href="route('accounts.index')" :class="['sidebar-item', { 'active': isActive('Treasury::Accounts') }]">
+                    <span>صندوق و بانک</span>
                 </Link>
 
                 <p class="px-3 pt-4 pb-2 text-xs font-semibold uppercase text-white/50">عملیات</p>
-                <Link :href="route('invoices.index')" :class="['sidebar-item', { 'active': $page.component.startsWith('Sales::') }]">
-                    <span>فاکتور ها</span>
+                <Link :href="route('invoices.index')" :class="['sidebar-item', { 'active': isActive('Sales::') }]">
+                    <span>فاکتورهای فروش</span>
+                </Link>
+                <Link :href="route('transactions.index')" :class="['sidebar-item', { 'active': isActive('Treasury::Transactions') }]">
+                    <span>تراکنش‌ها</span>
                 </Link>
 
-                <Link :href="route('accounts.index')" :class="['sidebar-item', { 'active': $page.component.startsWith('Treasury::Accounts') }]">
-                    <span>حساب ها</span>
-                </Link>
-                <Link :href="route('transactions.index')" :class="['sidebar-item', { 'active': $page.component.startsWith('Treasury::Transactions') }]">
-                    <span>لیست تراکنش‌ها</span>
-                </Link>
-
-                <p class="px-3 pt-4 pb-2 text-xs font-semibold uppercase text-white/50">تنظیمات</p>
-                <Link :href="route('financial-years.index')" :class="['sidebar-item', { 'active': $page.component.startsWith('Core::FinancialYears') }]">
+                <p class="px-3 pt-4 pb-2 text-xs font-semibold uppercase text-white/50">پیکربندی</p>
+                <Link :href="route('financial-years.index')" :class="['sidebar-item', { 'active': isActive('Core::FinancialYears') }]">
                     <span>سال مالی</span>
                 </Link>
+                <Link :href="route('settings.index')" :class="['sidebar-item', { 'active': isActive('Core::Settings') }]">
+                    <span>تنظیمات</span>
+                </Link>
+
             </nav>
         </aside>
 
