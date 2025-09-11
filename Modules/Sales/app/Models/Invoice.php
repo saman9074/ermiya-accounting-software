@@ -16,14 +16,17 @@ class Invoice extends Model
      */
     protected $fillable = [
         'person_id',
-        'invoice_date',
+        //'invoice_date',
         'total_amount',
         'paid_amount',
         'payment_status',
+        'issue_date',
+        'due_date',
     ];
 
+    protected $with = ['person', 'items'];
     protected $casts = [
-        'invoice_date' => 'date',
+        //'invoice_date' => 'date',
         'total_amount' => 'decimal:2',
         'paid_amount' => 'decimal:2',
     ];

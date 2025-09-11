@@ -16,10 +16,9 @@ class SalesController extends Controller
 {
     public function index()
     {
-        $invoices = Invoice::with('person')->orderBy('invoice_date', 'desc')->get();
+        $invoices = Invoice::with('person')->latest()->get();
         return Inertia::render('Sales::Invoices/Index', [
             'invoices' => $invoices,
-            'success' => session('success'),
         ]);
     }
 
@@ -35,11 +34,11 @@ class SalesController extends Controller
     {
         $validated = $request->validate([
             'person_id' => 'required|exists:persons,id',
-            'invoice_date' => ['required', 'date', new DateWithinFinancialYear],
-            'due_date' => 'nullable|date|after_or_equal:invoice_date',
+            'issue_date' => ['required', 'date', new DateWithinFinancialYear],
+            'due_date' => ['nullable', 'date', 'after_or_equal:issue_date'],
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|numeric|min:1',
+            'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit_price' => 'required|numeric|min:0',
         ]);
 
@@ -50,8 +49,8 @@ class SalesController extends Controller
 
             $invoice = Invoice::create([
                 'person_id' => $validated['person_id'],
-                'invoice_date' => $validated['invoice_date'],
-                // Use null coalescing operator to handle optional due_date
+                'invoice_number' => 'INV-' . time(), // Simple unique number for now
+                'issue_date' => $validated['issue_date'],
                 'due_date' => $validated['due_date'] ?? null,
                 'total_amount' => $totalAmount,
             ]);
@@ -71,9 +70,12 @@ class SalesController extends Controller
 
     public function show(Invoice $invoice)
     {
+        // Eager load relationships for efficiency
+        $invoice->load(['person', 'items.product']);
+
         return Inertia::render('Sales::Invoices/Show', [
-            'invoice' => $invoice->load('items.product', 'person'),
-            'accounts' => Account::all(),
+            'invoice' => $invoice,
+            'accounts' => \Modules\Treasury\Models\Account::all(),
         ]);
     }
 }
