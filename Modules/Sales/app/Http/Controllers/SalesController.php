@@ -42,7 +42,6 @@ class SalesController extends Controller
             'items.*.unit_price' => 'required|numeric|min:0',
         ]);
 
-        // Additional validation for stock
         foreach ($validated['items'] as $item) {
             $product = Product::find($item['product_id']);
             if ($product->stock < $item['quantity']) {
@@ -50,31 +49,37 @@ class SalesController extends Controller
             }
         }
 
-
         $invoice = DB::transaction(function () use ($validated) {
-            $totalAmount = collect($validated['items'])->sum(function ($item) {
-                return $item['quantity'] * $item['unit_price'];
-            });
+            $totalAmount = collect($validated['items'])->sum(fn($item) => $item['quantity'] * $item['unit_price']);
 
             $invoice = Invoice::create([
                 'person_id' => $validated['person_id'],
-                'invoice_number' => 'INV-' . time(), // Simple unique number for now
+                'invoice_number' => 'INV-' . time(),
                 'issue_date' => $validated['issue_date'],
                 'due_date' => $validated['due_date'] ?? null,
                 'total_amount' => $totalAmount,
             ]);
 
-            foreach ($validated['items'] as $item) {
-                $invoice->items()->create([
-                    'product_id' => $item['product_id'],
-                    'quantity' => $item['quantity'],
-                    'unit_price' => $item['unit_price'],
-                    'total_price' => $item['quantity'] * $item['unit_price'],
+            foreach ($validated['items'] as $itemData) {
+                $item = $invoice->items()->create([
+                    'product_id' => $itemData['product_id'],
+                    'quantity' => $itemData['quantity'],
+                    'unit_price' => $itemData['unit_price'],
+                    'total_price' => $itemData['quantity'] * $itemData['unit_price'],
                 ]);
 
-                // Decrement stock
-                $product = Product::find($item['product_id']);
-                $product->decrement('stock', $item['quantity']);
+                $product = Product::find($itemData['product_id']);
+                $product->decrement('stock', $itemData['quantity']);
+
+                // Create a stock movement record
+                StockMovement::create([
+                    'product_id' => $product->id,
+                    'reference_id' => $item->id,
+                    'reference_type' => get_class($item),
+                    'type' => 'sale',
+                    'quantity_change' => -$itemData['quantity'],
+                    'stock_after' => $product->fresh()->stock,
+                ]);
             }
 
             return $invoice;
