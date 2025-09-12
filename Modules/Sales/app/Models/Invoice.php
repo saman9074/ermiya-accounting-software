@@ -55,8 +55,8 @@ class Invoice extends Model
         );
     }
 
-    // protected static function newFactory(): InvoiceFactory
-    // {
-    //     // return InvoiceFactory::new();
-    // }
+    public function salesReturns()
+    {
+        return $this->hasMany(SalesReturn::class);
+    }
 }
