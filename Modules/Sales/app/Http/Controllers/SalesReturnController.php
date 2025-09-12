@@ -142,4 +142,42 @@ class SalesReturnController extends Controller
 
         return redirect()->route('invoices.show', $invoice->id)->with('success', 'فاکتور برگشت از فروش با موفقیت ثبت شد.');
     }
+
+    public function index()
+    {
+        $salesReturns = SalesReturn::with('person', 'invoice')
+            ->latest()
+            ->paginate(10);
+
+        return Inertia::render('Sales::SalesReturns/Index', [
+            'salesReturns' => $salesReturns,
+        ]);
+    }
+
+    public function destroy(SalesReturn $salesReturn)
+    {
+        DB::transaction(function () use ($salesReturn) {
+            // ۱. برگرداندن موجودی انبار و حذف کاردکس
+            foreach ($salesReturn->items as $item) {
+                $product = $item->product;
+
+                // کاهش موجودی انبار
+                $newStock = $product->stock - $item->quantity;
+                $product->update(['stock' => $newStock]);
+
+                // حذف رکورد کاردکس مرتبط (اگر با cascade on delete حذف نشود)
+                StockMovement::where('reference_type', SalesReturnItem::class)
+                    ->where('reference_id', $item->id)
+                    ->delete();
+            }
+
+            // ۲. حذف تراکنش مالی مرتبط
+            $salesReturn->transactions()->delete();
+
+            // ۳. حذف خود سند (آیتم‌ها به دلیل cascade on delete خودکار حذف می‌شوند)
+            $salesReturn->delete();
+        });
+
+        return redirect()->route('sales_returns.index')->with('success', 'سند برگشت از فروش با موفقیت حذف شد.');
+    }
 }

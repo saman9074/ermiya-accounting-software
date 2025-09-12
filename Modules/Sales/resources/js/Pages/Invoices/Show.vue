@@ -29,7 +29,7 @@ function printInvoice() {
             <h1 class="text-xl font-bold text-slate-800">مشاهده فاکتور</h1>
             <div class="flex items-center gap-2">
                 <button @click="showPaymentModal = true" class="btn-primary">ثبت دریافت وجه</button>
-                <Link :href="route('sales_returns.create', invoice.id)"
+                <Link :href="route('sales_returns.create_from_invoice', invoice.id)"
                       class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded mr-2">
                     برگشت از فروش
                 </Link>
