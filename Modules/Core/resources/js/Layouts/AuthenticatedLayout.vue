@@ -87,8 +87,11 @@ const isActive = (prefix) => {
                 </Link>
 
                 <p class="px-3 pt-4 pb-2 text-xs font-semibold uppercase text-white/50">عملیات</p>
-                <Link :href="route('invoices.index')" :class="['sidebar-item', { 'active': isActive('Sales::') }]">
+                <Link :href="route('invoices.index')" :class="['sidebar-item', { 'active': isActive('Sales::Sales') }]">
                     <span>فاکتورهای فروش</span>
+                </Link>
+                <Link :href="route('sales_returns.index')" :active="route().current('sales_returns.index')" :class="['sidebar-item', { 'active': isActive('Sales::SalesReturns') }]">
+                    برگشت از فروش
                 </Link>
                 <Link :href="route('transactions.index')" :class="['sidebar-item', { 'active': isActive('Treasury::Transactions') }]">
                     <span>تراکنش‌ها</span>
