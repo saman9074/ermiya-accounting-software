@@ -42,6 +42,7 @@ const deletePerson = (id) => {
                     <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-500">{{ person.group?.name || '---' }}</td>
                     <td class="whitespace-nowrap px-4 py-3 text-sm">{{ person.phone }}</td>
                     <td class="whitespace-nowrap px-4 py-3 text-sm">
+                        <Link :href="route('persons.statement', person.id)" class="text-blue-600 hover:text-blue-900 ml-2">صورتحساب</Link>
                         <Link :href="route('persons.edit', person.id)" class="text-indigo-600 hover:text-indigo-900 mx-2">ویرایش</Link>
                         <button @click="deletePerson(person.id)" class="text-red-600 hover:text-red-900 mx-2">حذف</button>
                     </td>

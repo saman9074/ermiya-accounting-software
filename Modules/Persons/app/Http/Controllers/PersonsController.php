@@ -9,6 +9,8 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Modules\Persons\Models\Person;
 use Modules\Persons\Models\PersonGroup;
+use Modules\Sales\Models\Invoice;
+use Modules\Treasury\Models\Transaction;
 
 class PersonsController extends Controller
 {
@@ -69,6 +71,40 @@ class PersonsController extends Controller
         $person->delete();
 
         return redirect()->route('persons.index')->with('success', 'شخص با موفقیت حذف شد.');
+    }
+
+    public function statement(Person $person)
+    {
+        // دریافت تمام فاکتورهای شخص
+        $invoices = $person->invoices()->with('items')->get();
+
+        // <--- شروع تغییرات --->
+        // دریافت تمام تراکنش‌های دریافتی که مرجع آنها فاکتورهای مربوط به این شخص است
+        $transactions = Transaction::where('type', 'income')
+            ->whereHasMorph(
+                'transactionable', // <-- نام صحیح رابطه از روی مدل Transaction
+                [Invoice::class],
+                function ($query) use ($person) {
+                    $query->where('person_id', $person->id);
+                }
+            )
+            ->get();
+        // <--- پایان تغییرات --->
+
+        // محاسبه مانده نهایی
+        $total_invoices = $invoices->sum('total_amount');
+        $total_paid = $transactions->sum('amount');
+        $balance = $total_invoices - $total_paid;
+
+
+        return Inertia::render('Persons::AccountStatement', [
+            'person' => $person,
+            'invoices' => $invoices,
+            'transactions' => $transactions,
+            'balance' => $balance,
+            'total_invoices' => $total_invoices,
+            'total_paid' => $total_paid
+        ]);
     }
 }
 

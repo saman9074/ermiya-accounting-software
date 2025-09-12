@@ -22,4 +22,9 @@ class Person extends Model
     {
         return $this->belongsTo(PersonGroup::class, 'person_group_id');
     }
+
+    public function invoices()
+    {
+        return $this->hasMany(\Modules\Sales\Models\Invoice::class);
+    }
 }
