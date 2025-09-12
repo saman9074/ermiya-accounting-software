@@ -4,6 +4,7 @@ namespace Modules\Persons\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 // use Modules\Persons\Database\Factories\PersonFactory;
 
 class Person extends Model
@@ -15,10 +16,10 @@ class Person extends Model
     /**
      * The attributes that are mass assignable.
      */
-    protected $fillable = ['name', 'phone', 'address'];
+    protected $fillable = ['name', 'phone', 'address', 'person_group_id'];
 
-    // protected static function newFactory(): PersonFactory
-    // {
-    //     // return PersonFactory::new();
-    // }
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(PersonGroup::class, 'person_group_id');
+    }
 }

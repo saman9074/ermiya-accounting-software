@@ -24,9 +24,15 @@ class SalesController extends Controller
 
     public function create()
     {
+        // Eager load relationships needed for dynamic pricing
+        $persons = Person::with('group.priceList')->get();
+        $products = Product::with(['unit', 'productPrices.priceList'])
+            ->where('stock', '>', 0)
+            ->get();
+
         return Inertia::render('Sales::Invoices/Create', [
-            'persons' => Person::all(),
-            'products' => Product::where('stock', '>', 0)->get(), // Only show products in stock
+            'persons' => $persons,
+            'products' => $products,
         ]);
     }
 
@@ -71,7 +77,6 @@ class SalesController extends Controller
                 $product = Product::find($itemData['product_id']);
                 $product->decrement('stock', $itemData['quantity']);
 
-                // Create a stock movement record
                 StockMovement::create([
                     'product_id' => $product->id,
                     'reference_id' => $item->id,
@@ -91,7 +96,6 @@ class SalesController extends Controller
     public function show(Invoice $invoice)
     {
         $invoice->load(['person', 'items.product']);
-
         return Inertia::render('Sales::Invoices/Show', [
             'invoice' => $invoice,
             'accounts' => Account::all(),
