@@ -6,11 +6,11 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Modules\Core\Rules\DateWithinFinancialYear;
 use Modules\Inventory\Models\Product;
 use Modules\Persons\Models\Person;
 use Modules\Sales\Models\Invoice;
 use Modules\Treasury\Models\Account;
-use Modules\Core\Rules\DateWithinFinancialYear;
 
 class SalesController extends Controller
 {
@@ -26,7 +26,7 @@ class SalesController extends Controller
     {
         return Inertia::render('Sales::Invoices/Create', [
             'persons' => Person::all(),
-            'products' => Product::all(),
+            'products' => Product::where('stock', '>', 0)->get(), // Only show products in stock
         ]);
     }
 
@@ -42,7 +42,16 @@ class SalesController extends Controller
             'items.*.unit_price' => 'required|numeric|min:0',
         ]);
 
-        DB::transaction(function () use ($validated) {
+        // Additional validation for stock
+        foreach ($validated['items'] as $item) {
+            $product = Product::find($item['product_id']);
+            if ($product->stock < $item['quantity']) {
+                return back()->withErrors(['items' => "موجودی کالای '{$product->name}' کافی نیست (موجودی فعلی: {$product->stock})"]);
+            }
+        }
+
+
+        $invoice = DB::transaction(function () use ($validated) {
             $totalAmount = collect($validated['items'])->sum(function ($item) {
                 return $item['quantity'] * $item['unit_price'];
             });
@@ -62,20 +71,25 @@ class SalesController extends Controller
                     'unit_price' => $item['unit_price'],
                     'total_price' => $item['quantity'] * $item['unit_price'],
                 ]);
+
+                // Decrement stock
+                $product = Product::find($item['product_id']);
+                $product->decrement('stock', $item['quantity']);
             }
+
+            return $invoice;
         });
 
-        return redirect()->route('invoices.index')->with('success', 'فاکتور جدید با موفقیت صادر شد.');
+        return redirect()->route('invoices.show', $invoice)->with('success', 'فاکتور جدید با موفقیت صادر شد.');
     }
 
     public function show(Invoice $invoice)
     {
-        // Eager load relationships for efficiency
         $invoice->load(['person', 'items.product']);
 
         return Inertia::render('Sales::Invoices/Show', [
             'invoice' => $invoice,
-            'accounts' => \Modules\Treasury\Models\Account::all(),
+            'accounts' => Account::all(),
         ]);
     }
 }
