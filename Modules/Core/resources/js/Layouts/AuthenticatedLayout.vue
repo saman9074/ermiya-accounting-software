@@ -67,6 +67,9 @@ const isActive = (prefix) => {
                 <Link :href="route('persons.index')" :class="['sidebar-item', { 'active': isActive('Persons::') }]">
                     <span>اشخاص</span>
                 </Link>
+                <Link :href="route('person-groups.index')" :class="['sidebar-item', { 'active': isActive('Persons::PersonGroups') }]">
+                    <span>گروه‌های اشخاص</span>
+                </Link>
                 <Link :href="route('products.index')" :class="['sidebar-item', { 'active': isActive('Inventory::Products') }]">
                     <span>کالاها</span>
                 </Link>

@@ -5,85 +5,70 @@ namespace Modules\Persons\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-
 use Inertia\Inertia;
 use Inertia\Response;
 use Modules\Persons\Models\Person;
+use Modules\Persons\Models\PersonGroup;
 
 class PersonsController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index(): Response
     {
-        $persons = Person::all();
+        // Eager load the group relationship for efficiency
+        $persons = Person::with('group')->get();
         return Inertia::render('Persons::Index', ['persons' => $persons]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create(): Response
     {
-        return Inertia::render('Persons::create');
+        // Pass person groups to the create view
+        return Inertia::render('Persons::create', [
+            'personGroups' => PersonGroup::all(),
+        ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string',
+            'person_group_id' => 'nullable|exists:person_groups,id',
         ]);
 
         Person::create($request->all());
 
-        return redirect()->route('persons.index');
+        return redirect()->route('persons.index')->with('success', 'شخص جدید با موفقیت ایجاد شد.');
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit($id): Response
+    public function edit(Person $person): Response
     {
-        $person = Person::findOrFail($id);
-
+        // Pass person groups to the edit view
         return Inertia::render('Persons::edit', [
             'person' => $person,
+            'personGroups' => PersonGroup::all(),
         ]);
     }
 
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, $id): RedirectResponse
+    public function update(Request $request, Person $person): RedirectResponse
     {
-        $person = Person::findOrFail($id);
-
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string',
+            'person_group_id' => 'nullable|exists:person_groups,id',
         ]);
 
         $person->update($validated);
 
-        return redirect()->route('persons.index');
+        return redirect()->route('persons.index')->with('success', 'اطلاعات شخص با موفقیت ویرایش شد.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy($id): RedirectResponse
+    public function destroy(Person $person): RedirectResponse
     {
-        $person = Person::findOrFail($id);
         $person->delete();
 
-        return redirect()->route('persons.index');
+        return redirect()->route('persons.index')->with('success', 'شخص با موفقیت حذف شد.');
     }
 }
+
