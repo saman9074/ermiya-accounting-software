@@ -4,8 +4,10 @@ namespace Modules\Inventory\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Modules\Inventory\Models\Category;
+use Modules\Inventory\Models\PriceList;
 use Modules\Inventory\Models\Product;
 use Modules\Inventory\Models\Unit;
 
@@ -16,9 +18,7 @@ class InventoryController extends Controller
      */
     public function index()
     {
-        // Eager load the 'unit' relationship to prevent N+1 query issues
         $products = Product::with('unit')->latest()->get();
-
         return Inertia::render('Inventory::Index', [
             'products' => $products,
         ]);
@@ -29,10 +29,10 @@ class InventoryController extends Controller
      */
     public function create()
     {
-        // Pass all categories and units to the create form for dropdowns
         return Inertia::render('Inventory::Create', [
             'categories' => Category::all(),
             'units' => Unit::all(),
+            'priceLists' => PriceList::all(),
         ]);
     }
 
@@ -41,19 +41,33 @@ class InventoryController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:191',
             'sku' => 'nullable|string|max:191|unique:products,sku',
             'purchase_price' => 'nullable|numeric|min:0',
-            'sale_price' => 'nullable|numeric|min:0',
+            'sale_price' => 'required|numeric|min:0', // Main sale price is required
+            'stock' => 'required|numeric',
             'unit_id' => 'required|exists:units,id',
             'category_id' => 'nullable|exists:categories,id',
+            'prices' => 'nullable|array',
+            'prices.*.price_list_id' => 'required|exists:price_lists,id',
+            'prices.*.price' => 'required|numeric|min:0',
         ]);
 
-        Product::create($request->all());
+        DB::transaction(function () use ($validated) {
+            $product = Product::create($validated);
 
-        return redirect()->route('products.index')
-            ->with('success', 'کالا با موفقیت ایجاد شد.');
+            if (!empty($validated['prices'])) {
+                foreach ($validated['prices'] as $priceData) {
+                    $product->productPrices()->create([
+                        'price_list_id' => $priceData['price_list_id'],
+                        'price' => $priceData['price'],
+                    ]);
+                }
+            }
+        });
+
+        return redirect()->route('products.index')->with('success', 'کالا با موفقیت ایجاد شد.');
     }
 
     /**
@@ -61,11 +75,14 @@ class InventoryController extends Controller
      */
     public function edit(Product $product)
     {
-        // Pass the product and all categories/units to the edit form
+        // Eager load the relationships to be sent to the frontend
+        $product->load('productPrices');
+
         return Inertia::render('Inventory::Edit', [
             'product' => $product,
             'categories' => Category::all(),
             'units' => Unit::all(),
+            'priceLists' => PriceList::all(),
         ]);
     }
 
@@ -74,19 +91,35 @@ class InventoryController extends Controller
      */
     public function update(Request $request, Product $product)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:191',
             'sku' => 'nullable|string|max:191|unique:products,sku,' . $product->id,
             'purchase_price' => 'nullable|numeric|min:0',
-            'sale_price' => 'nullable|numeric|min:0',
+            'sale_price' => 'required|numeric|min:0',
+            'stock' => 'required|numeric',
             'unit_id' => 'required|exists:units,id',
             'category_id' => 'nullable|exists:categories,id',
+            'prices' => 'nullable|array',
+            'prices.*.price_list_id' => 'required|exists:price_lists,id',
+            'prices.*.price' => 'required|numeric|min:0',
         ]);
 
-        $product->update($request->all());
+        DB::transaction(function () use ($validated, $product) {
+            $product->update($validated);
 
-        return redirect()->route('products.index')
-            ->with('success', 'کالا با موفقیت به‌روزرسانی شد.');
+            // Sync product prices
+            $product->productPrices()->delete(); // Remove old prices
+            if (!empty($validated['prices'])) {
+                foreach ($validated['prices'] as $priceData) {
+                    $product->productPrices()->create([
+                        'price_list_id' => $priceData['price_list_id'],
+                        'price' => $priceData['price'],
+                    ]);
+                }
+            }
+        });
+
+        return redirect()->route('products.index')->with('success', 'کالا با موفقیت به‌روزرسانی شد.');
     }
 
     /**
@@ -95,8 +128,7 @@ class InventoryController extends Controller
     public function destroy(Product $product)
     {
         $product->delete();
-
-        return redirect()->route('products.index')
-            ->with('success', 'کالا با موفقیت حذف شد.');
+        return redirect()->route('products.index')->with('success', 'کالا با موفقیت حذف شد.');
     }
 }
+
