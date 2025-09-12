@@ -19,8 +19,15 @@ class Product extends Model
         'description',
         'purchase_price',
         'sale_price',
+        'stock',
         'category_id',
         'unit_id',
+    ];
+
+    protected $casts = [
+        'purchase_price' => 'decimal:2',
+        'sale_price' => 'decimal:2',
+        'stock' => 'decimal:2',
     ];
     // protected static function newFactory(): ProductFactory
     // {
