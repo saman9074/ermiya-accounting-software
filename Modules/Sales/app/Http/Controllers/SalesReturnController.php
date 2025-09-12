@@ -17,8 +17,22 @@ class SalesReturnController extends Controller
 {
     public function create(Invoice $invoice)
     {
-        // Load the items of the original invoice to show in the form
         $invoice->load('items.product');
+
+        // محاسبه تعداد کالاهایی که قبلا برگشت داده شده‌اند
+        $previouslyReturnedItems = SalesReturnItem::whereHas('salesReturn', function ($query) use ($invoice) {
+            $query->where('invoice_id', $invoice->id);
+        })
+            ->select('product_id', DB::raw('SUM(quantity) as total_returned'))
+            ->groupBy('product_id')
+            ->get()
+            ->keyBy('product_id');
+
+        // اضافه کردن تعداد قابل برگشت به هر آیتم فاکتور
+        $invoice->items->each(function ($item) use ($previouslyReturnedItems) {
+            $returnedQty = $previouslyReturnedItems->get($item->product_id)->total_returned ?? 0;
+            $item->returnable_quantity = $item->quantity - $returnedQty;
+        });
 
         return Inertia::render('Sales::SalesReturns/Create', [
             'invoice' => $invoice
@@ -27,19 +41,48 @@ class SalesReturnController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+
+
+        $invoice = Invoice::findOrFail($request->input('invoice_id'));
+
+        // اعتبارسنجی سفارشی برای هر آیتم
+        $request->validate([
             'invoice_id' => 'required|exists:invoices,id',
             'return_date' => 'required|date',
             'description' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.quantity' => [
+                'required',
+                'numeric',
+                'min:0.01',
+                function ($attribute, $value, $fail) use ($request, $invoice) {
+                    // $attribute will be something like 'items.0.quantity'
+                    $index = explode('.', $attribute)[1];
+                    $productId = $request->input("items.$index.product_id");
+
+                    $invoiceItem = $invoice->items()->where('product_id', $productId)->first();
+                    if (!$invoiceItem) {
+                        return $fail('این کالا در فاکتور اصلی وجود ندارد.');
+                    }
+
+                    $soldQty = $invoiceItem->quantity;
+
+                    $returnedQty = SalesReturnItem::whereHas('salesReturn', function ($q) use ($invoice) {
+                        $q->where('invoice_id', $invoice->id);
+                    })->where('product_id', $productId)->sum('quantity');
+
+                    $returnableQty = $soldQty - $returnedQty;
+
+                    if ($value > $returnableQty) {
+                        $fail("شما حداکثر می‌توانید {$returnableQty} عدد از این کالا را مرجوع کنید.");
+                    }
+                },
+            ],
         ]);
 
-        $invoice = Invoice::findOrFail($validated['invoice_id']);
-
-        // TODO: Validate that returned quantity is not more than sold quantity
+        $validated = $request->all(); // all data is now validated
 
         $totalReturnAmount = collect($validated['items'])->sum(function ($item) {
             return $item['quantity'] * $item['unit_price'];
