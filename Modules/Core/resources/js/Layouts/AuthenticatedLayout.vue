@@ -76,6 +76,9 @@ const isActive = (prefix) => {
                 <Link :href="route('units.index')" :class="['sidebar-item', { 'active': isActive('Inventory::Units') }]">
                     <span>واحدها</span>
                 </Link>
+                <Link :href="route('price-lists.index')" :class="['sidebar-item', { 'active': isActive('Inventory::PriceLists') }]">
+                    <span>سطوح قیمت</span>
+                </Link>
                 <Link :href="route('accounts.index')" :class="['sidebar-item', { 'active': isActive('Treasury::Accounts') }]">
                     <span>صندوق و بانک</span>
                 </Link>

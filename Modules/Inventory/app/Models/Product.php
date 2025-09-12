@@ -50,4 +50,9 @@ class Product extends Model
     {
         return $this->hasMany(StockMovement::class)->latest();
     }
+
+    public function productPrices(): HasMany
+    {
+        return $this->hasMany(ProductPrice::class);
+    }
 }
