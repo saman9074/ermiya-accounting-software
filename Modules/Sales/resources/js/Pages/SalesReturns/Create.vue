@@ -9,14 +9,13 @@ const props = defineProps({
 });
 
 const form = useForm({
-    invoice_id: props.invoice.id,
-    return_date: new Date().toISOString().slice(0, 10),
-    description: '',
+    // ...
     items: props.invoice.items.map(item => ({
         product_id: item.product_id,
         name: item.product.name,
         original_quantity: item.quantity,
-        quantity: 0, // Default returned quantity
+        returnable_quantity: item.returnable_quantity, // داده جدید
+        quantity: 0,
         unit_price: item.unit_price,
     })),
 });
@@ -86,18 +85,26 @@ const formatNumber = (number) => {
                                         <thead>
                                         <tr>
                                             <th class="text-right py-2">کالا</th>
-                                            <th class="text-right py-2">تعداد فروخته شده</th>
-                                            <th class="text-right py-2">قیمت واحد</th>
+                                            <th class="text-right py-2">فروخته شده</th>
+                                            <th class="text-right py-2">قابل برگشت</th>
                                             <th class="text-right py-2" width="150px">تعداد مرجوعی</th>
                                         </tr>
                                         </thead>
                                         <tbody>
-                                        <tr v-for="(item, index) in form.items" :key="index">
+                                        <tr v-for="(item, index) in form.items" :key="index" :class="{ 'bg-gray-100': item.returnable_quantity <= 0 }">
                                             <td class="py-2">{{ item.name }}</td>
                                             <td class="py-2">{{ item.original_quantity }}</td>
-                                            <td class="py-2">{{ formatNumber(item.unit_price) }}</td>
+                                            <td class="py-2 font-bold">{{ item.returnable_quantity }}</td>
                                             <td class="py-2">
-                                                <input type="number" v-model="item.quantity" class="w-full text-left" min="0" :max="item.original_quantity" step="any">
+                                                <input
+                                                    type="number"
+                                                    v-model="item.quantity"
+                                                    class="w-full text-left"
+                                                    min="0"
+                                                    :max="item.returnable_quantity"
+                                                    step="any"
+                                                    :disabled="item.returnable_quantity <= 0"
+                                                >
                                             </td>
                                         </tr>
                                         </tbody>
