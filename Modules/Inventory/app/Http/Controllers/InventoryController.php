@@ -10,6 +10,7 @@ use Modules\Inventory\Models\Category;
 use Modules\Inventory\Models\PriceList;
 use Modules\Inventory\Models\Product;
 use Modules\Inventory\Models\Unit;
+use Modules\Inventory\Models\StockMovement;
 
 class InventoryController extends Controller
 {
@@ -56,6 +57,17 @@ class InventoryController extends Controller
 
         DB::transaction(function () use ($validated) {
             $product = Product::create($validated);
+
+            if (isset($validated['stock'])) {
+                StockMovement::create([
+                    'product_id' => $product->id,
+                    'reference_id' => null,
+                    'reference_type' => null,
+                    'type' => 'initial_stock',
+                    'quantity_change' => $validated['stock'],
+                    'stock_after' => $validated['stock'],
+                ]);
+            }
 
             if (!empty($validated['prices'])) {
                 foreach ($validated['prices'] as $priceData) {
