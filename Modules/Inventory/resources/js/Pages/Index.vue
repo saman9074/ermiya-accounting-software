@@ -45,14 +45,12 @@ const formatCurrency = (value) => {
                     <td class="whitespace-nowrap px-4 py-3 text-sm">{{ product.name }}</td>
                     <td class="whitespace-nowrap px-4 py-3 text-sm">{{ formatCurrency(product.sale_price) }}</td>
                     <td class="whitespace-nowrap px-4 py-3 text-sm font-bold" :class="{'text-red-600': product.stock <= 0}">{{ product.stock }}</td>
-                    <td class="whitespace-nowrap px-4 py-3 text-sm">{{ product.unit.name }}</td>
+                    <!-- The optional chaining operator (?.) prevents an error if product.unit is null or undefined -->
+                    <td class="whitespace-nowrap px-4 py-3 text-sm">{{ product.unit?.name }}</td>
                     <td class="whitespace-nowrap px-4 py-3 text-sm">
-                        <Link :href="route('products.edit', product.id)" class="text-indigo-600 hover:text-indigo-900 mx-2">
-                            ویرایش
-                        </Link>
-                        <button @click="deleteProduct(product.id)" class="text-red-600 hover:text-red-900 mx-2">
-                            حذف
-                        </button>
+                        <Link :href="route('products.kardex', product.id)" class="text-gray-600 hover:text-gray-900 mx-2">کاردکس</Link>
+                        <Link :href="route('products.edit', product.id)" class="text-indigo-600 hover:text-indigo-900 mx-2">ویرایش</Link>
+                        <button @click="deleteProduct(product.id)" class="text-red-600 hover:text-red-900 mx-2">حذف</button>
                     </td>
                 </tr>
                 <tr v-if="products.length === 0">
