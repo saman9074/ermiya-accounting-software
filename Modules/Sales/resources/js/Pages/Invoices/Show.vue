@@ -1,145 +1,173 @@
 <script setup>
 import AuthenticatedLayout from '@Core/Layouts/AuthenticatedLayout.vue';
-import { Head, Link, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { Head, Link } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import ReceivePaymentModal from '@Sales/Components/ReceivePaymentModal.vue';
 
 const props = defineProps({
     invoice: Object,
+    companySettings: Object,
     accounts: Array,
-    success: String,
 });
 
-// Access global settings from page props
-const settings = computed(() => usePage().props.settings);
-const companyLogoUrl = computed(() => settings.value.company_logo_path ? `/storage/${settings.value.company_logo_path}` : null);
+const isPaymentModalOpen = ref(false);
 
+const openPaymentModal = () => {
+    isPaymentModalOpen.value = true;
+};
 
-const showPaymentModal = ref(false);
+const closePaymentModal = () => {
+    isPaymentModalOpen.value = false;
+};
 
-function printInvoice() {
+const formatNumber = (number) => {
+    // اگر ورودی عدد نباشد، صفر برگردان
+    if (number === null || typeof number === 'undefined' || isNaN(number)) {
+        return formatNumber(0);
+    }
+    return new Intl.NumberFormat('fa-IR').format(number);
+};
+
+const formatDate = (dateString) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleDateString('fa-IR', {
+        year: 'numeric', month: 'long', day: 'numeric'
+    });
+};
+
+const printInvoice = () => {
     window.print();
-}
+};
 </script>
 
 <template>
-    <Head :title="`فاکتور شماره ${invoice.invoice_number}`" />
+    <Head :title="'فاکتور شماره ' + invoice.id" />
+
     <AuthenticatedLayout>
-        <div class="mb-6 flex items-center justify-between print:hidden">
-            <h1 class="text-xl font-bold text-slate-800">مشاهده فاکتور</h1>
-            <div class="flex items-center gap-2">
-                <button @click="showPaymentModal = true" class="btn-primary">ثبت دریافت وجه</button>
-                <Link :href="route('sales_returns.create_from_invoice', invoice.id)"
-                      class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded mr-2">
-                    برگشت از فروش
-                </Link>
-                <button @click="printInvoice" class="inline-flex items-center justify-center rounded-md border bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">چاپ فاکتور</button>
-                <Link :href="route('invoices.index')" class="text-sm text-gray-600 hover:text-gray-900">بازگشت</Link>
+        <template #header>
+            <div class="flex justify-between items-center">
+                <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                    جزئیات فاکتور شماره: {{ invoice.id }}
+                </h2>
+                <div class="print-hidden">
+                    <Link :href="route('sales_returns.create_from_invoice', invoice.id)"
+                          class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-md text-sm ml-2">
+                        برگشت از فروش
+                    </Link>
+                    <button @click="openPaymentModal" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md text-sm ml-2">
+                        دریافت وجه
+                    </button>
+                    <button @click="printInvoice" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md text-sm">
+                        چاپ
+                    </button>
+                </div>
+            </div>
+        </template>
+
+        <ReceivePaymentModal
+            :show="isPaymentModalOpen"
+            :invoice="invoice"
+            :accounts="accounts"
+            @close="closePaymentModal"
+        />
+
+        <div class="py-12">
+            <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
+                <div id="invoice-content" class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                    <div class="p-8 text-gray-900">
+                        <div class="flex justify-between items-start border-b-2 pb-6 mb-6">
+                            <div>
+                                <h1 class="text-2xl font-bold">{{ companySettings.name || 'نام شرکت' }}</h1>
+                                <p>{{ companySettings.address || 'آدرس شرکت' }}</p>
+                                <p>تلفن: {{ companySettings.phone || 'تلفن شرکت' }}</p>
+                            </div>
+                            <div class="text-left">
+                                <h2 class="text-xl font-bold">فاکتور فروش</h2>
+                                <p>شماره فاکتور: <span class="font-semibold">{{ invoice.id }}</span></p>
+                                <p>تاریخ صدور: <span class="font-semibold">{{ formatDate(invoice.issue_date) }}</span></p>
+                                <p>تاریخ سررسید: <span class="font-semibold">{{ formatDate(invoice.due_date) }}</span></p>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <h3 class="font-bold text-gray-800 mb-2">صورتحساب برای:</h3>
+                            <p class="font-semibold">{{ invoice.person.name }}</p>
+                            <p>{{ invoice.person.address }}</p>
+                            <p>تلفن: {{ invoice.person.phone }}</p>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-sm">
+                                <thead class="bg-gray-100">
+                                <tr class="text-right">
+                                    <th class="py-2 px-4 font-semibold">#</th>
+                                    <th class="py-2 px-4 font-semibold">کالا/خدمات</th>
+                                    <th class="py-2 px-4 font-semibold">تعداد</th>
+                                    <th class="py-2 px-4 font-semibold">قیمت واحد</th>
+                                    <th class="py-2 px-4 font-semibold">تخفیف</th>
+                                    <th class="py-2 px-4 font-semibold">جمع کل</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr v-for="(item, index) in invoice.items" :key="item.id" class="border-b">
+                                    <td class="py-3 px-4">{{ index + 1 }}</td>
+                                    <td class="py-3 px-4">{{ item.product.name }}</td>
+                                    <td class="py-3 px-4">{{ item.quantity }}</td>
+                                    <td class="py-3 px-4">{{ formatNumber(item.unit_price) }}</td>
+                                    <td class="py-3 px-4 text-red-600">{{ formatNumber(item.discount_amount) }}</td>
+                                    <td class="py-3 px-4 font-semibold">{{ formatNumber(item.total_price) }}</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="flex justify-end mt-6">
+                            <div class="w-full max-w-sm">
+                                <div class="flex justify-between py-2">
+                                    <span class="font-semibold">جمع آیتم‌ها:</span>
+                                    <span>{{ formatNumber(invoice.subtotal_amount) }}</span>
+                                </div>
+                                <div v-if="invoice.discount_amount > 0" class="flex justify-between py-2 text-red-600">
+                                    <span class="font-semibold">تخفیف کلی:</span>
+                                    <span>({{ formatNumber(invoice.discount_amount) }})</span>
+                                </div>
+                                <div class="flex justify-between py-2 border-t-2 font-bold text-lg">
+                                    <span class="font-semibold">مبلغ کل:</span>
+                                    <span>{{ formatNumber(invoice.total_amount) }}</span>
+                                </div>
+                                <div class="flex justify-between py-2 text-green-600">
+                                    <span class="font-semibold">پرداخت شده:</span>
+                                    <span>{{ formatNumber(invoice.paid_amount) }}</span>
+                                </div>
+                                <div class="flex justify-between py-2 bg-gray-100 px-4 rounded-md font-bold text-xl">
+                                    <span class="font-semibold">مانده:</span>
+                                    <span>{{ formatNumber(invoice.total_amount - invoice.paid_amount) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-
-        <!-- Success Message -->
-        <div v-if="success" class="mb-4 rounded-md bg-green-100 p-4 text-sm font-medium text-green-700 print:hidden">
-            {{ success }}
-        </div>
-
-        <!-- Invoice Paper -->
-        <div class="bg-white p-8 shadow-lg print:shadow-none" id="invoice-content">
-            <!-- Invoice Header -->
-            <header class="flex items-center justify-between border-b pb-4">
-                <div>
-                    <h2 class="text-2xl font-bold">{{ settings.company_name || 'نام شرکت' }}</h2>
-                    <p class="text-sm text-gray-500">{{ settings.company_address || 'آدرس شرکت' }}</p>
-                    <p class="text-sm text-gray-500">تلفن: {{ settings.company_phone || '-' }}</p>
-                </div>
-                <div class="w-24">
-                    <img v-if="companyLogoUrl" :src="companyLogoUrl" alt="Company Logo" class="h-auto w-full">
-                </div>
-            </header>
-
-            <!-- Invoice Details -->
-            <section class="mt-6 grid grid-cols-2 gap-4">
-                <div>
-                    <h3 class="font-semibold">فاکتور برای:</h3>
-                    <p>{{ invoice.person.name }}</p>
-                    <p v-if="invoice.person.address" class="text-gray-500">{{ invoice.person.address }}</p>
-                    <p v-if="invoice.person.phone" class="text-gray-500">تلفن: {{ invoice.person.phone }}</p>
-                </div>
-                <div class="text-left">
-                    <h3 class="font-semibold">شماره فاکتور: {{ invoice.invoice_number }}</h3>
-                    <p class="text-gray-500">تاریخ صدور: {{ invoice.issue_date }}</p>
-                    <p class="text-gray-500">تاریخ سررسید: {{ invoice.due_date || '-' }}</p>
-                    <div class="mt-2">
-                        <span v-if="invoice.payment_status === 'paid'" class="badge-success">پرداخت شده</span>
-                        <span v-else-if="invoice.payment_status === 'partial'" class="badge-warning">پرداخت جزئی</span>
-                        <span v-else class="badge-danger">پرداخت نشده</span>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Invoice Items Table -->
-            <section class="mt-8">
-                <table class="min-w-full">
-                    <thead class="border-b bg-slate-50">
-                    <tr>
-                        <th class="px-4 py-2 text-right text-sm font-medium text-slate-600">#</th>
-                        <th class="px-4 py-2 text-right text-sm font-medium text-slate-600">کالا/خدمات</th>
-                        <th class="px-4 py-2 text-center text-sm font-medium text-slate-600">تعداد</th>
-                        <th class="px-4 py-2 text-left text-sm font-medium text-slate-600">قیمت واحد</th>
-                        <th class="px-4 py-2 text-left text-sm font-medium text-slate-600">جمع کل</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr v-for="(item, index) in invoice.items" :key="item.id" class="border-b">
-                        <td class="px-4 py-3">{{ index + 1 }}</td>
-                        <td class="px-4 py-3">
-                            <p class="font-medium">{{ item.product.name }}</p>
-                        </td>
-                        <td class="px-4 py-3 text-center">{{ item.quantity }}</td>
-                        <td class="px-4 py-3 text-left">{{ new Intl.NumberFormat('fa-IR').format(item.unit_price) }}</td>
-                        <td class="px-4 py-3 text-left font-medium">{{ new Intl.NumberFormat('fa-IR').format(item.total_price) }}</td>
-                    </tr>
-                    </tbody>
-                </table>
-            </section>
-
-            <!-- Invoice Footer -->
-            <footer class="mt-8 flex justify-end">
-                <div class="w-full max-w-sm">
-                    <div class="flex justify-between py-2">
-                        <span class="text-gray-600">جمع جزء:</span>
-                        <span>{{ new Intl.NumberFormat('fa-IR').format(invoice.total_amount) }} تومان</span>
-                    </div>
-                    <div class="flex justify-between py-2">
-                        <span class="text-gray-600">پرداخت شده:</span>
-                        <span>{{ new Intl.NumberFormat('fa-IR').format(invoice.paid_amount) }} تومان</span>
-                    </div>
-                    <div class="flex justify-between border-t-2 pt-2 font-bold">
-                        <span>مانده حساب:</span>
-                        <span>{{ new Intl.NumberFormat('fa-IR').format(invoice.total_amount - invoice.paid_amount) }} تومان</span>
-                    </div>
-                </div>
-            </footer>
-        </div>
-
-        <ReceivePaymentModal :show="showPaymentModal" :invoice="invoice" :accounts="accounts" @close="showPaymentModal = false"/>
     </AuthenticatedLayout>
 </template>
 
 <style>
 @media print {
-    body * {
-        visibility: hidden;
+    .print-hidden {
+        display: none;
     }
-    #invoice-content, #invoice-content * {
-        visibility: visible;
+    body {
+        background-color: white;
     }
     #invoice-content {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
+        box-shadow: none;
+        border: none;
+        margin: 0;
+        padding: 0;
+    }
+    .py-12 {
+        padding: 0;
     }
 }
 </style>
-

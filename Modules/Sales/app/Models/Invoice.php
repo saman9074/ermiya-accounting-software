@@ -16,19 +16,26 @@ class Invoice extends Model
      */
     protected $fillable = [
         'person_id',
-        //'invoice_date',
-        'total_amount',
-        'paid_amount',
-        'payment_status',
         'issue_date',
         'due_date',
+        'subtotal_amount',
+        'discount_type',
+        'discount_value',
+        'discount_amount',
+        'total_amount',
+        'paid_amount',
+        'status',
     ];
 
     protected $with = ['person', 'items'];
     protected $casts = [
-        //'invoice_date' => 'date',
+        'issue_date' => 'date',
+        'due_date' => 'date',
+        'subtotal_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
         'paid_amount' => 'decimal:2',
+        'discount_value' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
     ];
     public function person(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
@@ -58,5 +65,15 @@ class Invoice extends Model
     public function salesReturns()
     {
         return $this->hasMany(SalesReturn::class);
+    }
+    protected $appends = ['translated_status'];
+    public function getTranslatedStatusAttribute(): string
+    {
+        return match ($this->status) {
+            'unpaid' => 'پرداخت نشده',
+            'paid' => 'پرداخت شده',
+            'partial' => 'پرداخت ناقص',
+            default => $this->status,
+        };
     }
 }
