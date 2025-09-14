@@ -1,65 +1,95 @@
 <script setup>
 import AuthenticatedLayout from '@Core/Layouts/AuthenticatedLayout.vue';
 import { Head, useForm, Link } from '@inertiajs/vue3';
+import vSelect from "vue-select";
+import "vue-select/dist/vue-select.css";
 
 const props = defineProps({
     transaction: Object,
     accounts: Array,
+    categories: Array,
+    payees: Array,
 });
 
 const form = useForm({
+    _method: 'put', // Important for file uploads with PUT/PATCH
     account_id: props.transaction.account_id,
-    amount: props.transaction.amount,
-    transaction_date: new Date(props.transaction.transaction_date).toISOString().slice(0, 10),
+    expense_category_id: props.transaction.expense_category_id,
+    payee_id: props.transaction.payee_id,
+    transaction_date: props.transaction.transaction_date.slice(0, 10),
+    amount: Math.abs(props.transaction.amount),
     description: props.transaction.description,
+    attachment: null, // New file to upload
 });
 
+const onFileChange = (e) => {
+    form.attachment = e.target.files[0];
+};
+
 const submit = () => {
-    form.put(route('transactions.update', props.transaction.id));
+    form.post(route('transactions.update', props.transaction.id)); // Use post because of file upload
 };
 </script>
 
 <template>
-    <Head title="ویرایش تراکنش" />
-
+    <Head :title="'ویرایش تراکنش ' + transaction.id" />
     <AuthenticatedLayout>
-        <div class="mb-6">
-            <h1 class="text-xl font-bold text-slate-800">ویرایش تراکنش #{{ transaction.id }}</h1>
-        </div>
+        <template #header>
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">ویرایش تراکنش</h2>
+        </template>
+        <div class="py-12">
+            <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
+                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                    <div class="p-8">
+                        <div v-if="transaction.type === 'income'" class="mb-6 bg-yellow-100 p-4 rounded-md text-yellow-800 text-sm">
+                            توجه: شما در حال ویرایش یک تراکنش دریافت هستید. ویرایش این مورد ممکن است با اسناد فروش تداخل ایجاد کند.
+                        </div>
+                        <form @submit.prevent="submit" class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label>تاریخ</label>
+                                    <input type="date" v-model="form.transaction_date" class="block w-full mt-1" required>
+                                </div>
+                                <div>
+                                    <label>مبلغ</label>
+                                    <input type="number" v-model="form.amount" class="block w-full mt-1" required>
+                                </div>
+                            </div>
+                            <div>
+                                <label>حساب</label>
+                                <v-select dir="rtl" :options="accounts" label="name" :reduce="acc => acc.id" v-model="form.account_id"/>
+                            </div>
 
-        <div class="max-w-2xl">
-            <div class="card">
-                <form @submit.prevent="submit" class="space-y-4">
-                    <div>
-                        <label for="amount" class="block font-medium text-sm text-gray-700">مبلغ</label>
-                        <input v-model="form.amount" id="amount" type="number" step="any" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                        <div v-if="form.errors.amount" class="text-red-600 text-sm mt-1">{{ form.errors.amount }}</div>
-                    </div>
+                            <template v-if="transaction.type === 'expense'">
+                                <div>
+                                    <label>دسته‌بندی هزینه</label>
+                                    <v-select dir="rtl" :options="categories" label="name" :reduce="cat => cat.id" v-model="form.expense_category_id"/>
+                                </div>
+                                <div>
+                                    <label>طرف حساب</label>
+                                    <v-select dir="rtl" :options="payees" label="name" :reduce="p => p.id" v-model="form.payee_id"/>
+                                </div>
+                            </template>
 
-                    <div>
-                        <label for="account_id" class="block font-medium text-sm text-gray-700">حساب</label>
-                        <select v-model="form.account_id" id="account_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                            <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }}</option>
-                        </select>
-                        <div v-if="form.errors.account_id" class="text-red-600 text-sm mt-1">{{ form.errors.account_id }}</div>
-                    </div>
+                            <div>
+                                <label>توضیحات</label>
+                                <textarea v-model="form.description" rows="3" class="block w-full mt-1"></textarea>
+                            </div>
+                            <div>
+                                <label>تغییر فایل ضمیمه (اختیاری)</label>
+                                <a v-if="transaction.attachment && !form.attachment" :href="`/storage/${transaction.attachment}`" target="_blank" class="text-sm text-blue-600 block mb-2 hover:underline">مشاهده فایل فعلی</a>
+                                <input type="file" @change="onFileChange" class="block w-full mt-1 text-sm">
+                            </div>
 
-                    <div>
-                        <label for="transaction_date" class="block font-medium text-sm text-gray-700">تاریخ</label>
-                        <input v-model="form.transaction_date" id="transaction_date" type="date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                        <div v-if="form.errors.transaction_date" class="text-red-600 text-sm mt-1">{{ form.errors.transaction_date }}</div>
+                            <div class="mt-8 flex justify-end gap-4">
+                                <Link :href="route('transactions.index')">انصراف</Link>
+                                <button type="submit" :disabled="form.processing" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-md">
+                                    به‌روزرسانی
+                                </button>
+                            </div>
+                        </form>
                     </div>
-
-                    <div>
-                        <label for="description" class="block font-medium text-sm text-gray-700">توضیحات</label>
-                        <textarea v-model="form.description" id="description" rows="2" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"></textarea>
-                    </div>
-
-                    <div class="flex items-center justify-end pt-4 border-t mt-6">
-                        <Link :href="route('transactions.index')" class="text-sm text-gray-600 hover:text-gray-900 ml-4">انصراف</Link>
-                        <button type="submit" :disabled="form.processing" class="btn-primary">ذخیره تغییرات</button>
-                    </div>
-                </form>
+                </div>
             </div>
         </div>
     </AuthenticatedLayout>

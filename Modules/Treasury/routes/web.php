@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Treasury\Http\Controllers\ExpenseCategoryController;
+use Modules\Treasury\Http\Controllers\PayeeController;
+use Modules\Treasury\Http\Controllers\PaymentController;
 use Modules\Treasury\Http\Controllers\TransactionController;
 use Modules\Treasury\Http\Controllers\TreasuryController;
 
@@ -16,6 +18,10 @@ Route::middleware('auth')->group(function() {
     Route::resource('transactions', TransactionController::class)->only(['index', 'edit', 'update', 'destroy']);
 
     Route::resource('expense-categories', ExpenseCategoryController::class);
+
+    Route::resource('payees', PayeeController::class);
+    Route::get('payments/create', [PaymentController::class, 'create'])->name('payments.create');
+    Route::post('payments', [PaymentController::class, 'store'])->name('payments.store');
 });
 
 
