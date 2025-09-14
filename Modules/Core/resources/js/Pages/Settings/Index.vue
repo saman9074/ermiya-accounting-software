@@ -13,6 +13,7 @@ const form = useForm({
     company_address: props.settings.company_address || '',
     company_phone: props.settings.company_phone || '',
     company_logo: null, // For file input
+    default_print_size: props.settings.default_print_size || 'A4',
 });
 
 // To display the current logo
@@ -78,6 +79,15 @@ function submit() {
                     <div v-if="logoPreview" class="mt-4">
                         <img :src="logoPreview" alt="Preview" class="h-20 w-auto rounded-md border p-1">
                     </div>
+                </div>
+
+                <div class="mt-4">
+                    <label for="default_print_size" class="block font-medium text-sm text-gray-700">سایز چاپ پیش‌فرض</label>
+                    <select id="default_print_size" v-model="form.default_print_size" class="block w-full mt-1 border-gray-300 rounded-md shadow-sm">
+                        <option value="A4">A4</option>
+                        <option value="A5">A5</option>
+                        <option value="Thermal">حرارتی (Thermal)</option>
+                    </select>
                 </div>
 
 

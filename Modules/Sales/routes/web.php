@@ -7,6 +7,7 @@ use Modules\Sales\Http\Controllers\SalesReturnController;
 Route::middleware('auth')->group(function() {
     Route::resource('invoices', SalesController::class);
     Route::get('invoices/{invoice}/return', [SalesReturnController::class, 'create'])->name('sales_returns.create_from_invoice');
+    Route::get('/invoices/{invoice}/print', [SalesController::class, 'print'])->name('invoices.print');
 
     Route::resource('sales_returns', SalesReturnController::class)->except(['edit', 'update']);
 });

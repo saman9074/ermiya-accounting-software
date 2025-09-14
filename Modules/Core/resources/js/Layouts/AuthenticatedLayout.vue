@@ -12,20 +12,16 @@ const page = usePage();
 const isActive = (prefix) => {
     return page.component.startsWith(prefix);
 };
-
 </script>
 
 <template>
     <div class="min-h-screen bg-brand-bg text-slate-800">
-        <!-- Header -->
         <header class="fixed inset-x-0 top-0 z-40 bg-brand-header text-white shadow-md">
             <div class="mx-auto flex h-16 max-w-full items-center justify-between px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center gap-3">
-                    <!-- Mobile Menu Button -->
                     <button @click="sidebarOpen = !sidebarOpen" class="flex h-10 w-10 items-center justify-center rounded-md hover:bg-white/10 md:hidden" aria-label="Toggle menu">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-6 w-6"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
                     </button>
-                    <!-- Logo and Title -->
                     <Link :href="route('dashboard')" class="flex items-center gap-3">
                         <div class="h-10 w-10 rounded-md bg-white/10 p-1.5 text-white">
                             <ApplicationLogo />
@@ -38,14 +34,12 @@ const isActive = (prefix) => {
                 </div>
 
                 <div class="flex items-center gap-3">
-                    <!-- Search Bar -->
                     <div class="hidden sm:block">
                         <label class="relative block">
                             <input aria-label="جستجو" placeholder="جستجو..." class="w-60 rounded-md border border-white/10 bg-white/5 py-2 pr-10 pl-3 text-sm placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/20" />
                             <svg class="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-white/70" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 21l-4.35-4.35" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="11" r="6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         </label>
                     </div>
-                    <!-- User Profile -->
                     <div class="flex items-center gap-2 rounded-full bg-white/10 px-2 py-1">
                         <div class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sm font-bold">
                             {{ $page.props.auth.user.name.substring(0, 2) }}
@@ -56,7 +50,6 @@ const isActive = (prefix) => {
             </div>
         </header>
 
-        <!-- Sidebar (Right) -->
         <aside :class="['fixed top-16 bottom-0 right-0 z-30 w-64 transform bg-brand-header text-white shadow-xl transition-transform duration-300 md:translate-x-0', { 'translate-x-0': sidebarOpen, 'translate-x-full md:translate-x-0': !sidebarOpen }]" aria-label="Main Navigation">
             <nav class="flex h-full flex-col gap-1.5 overflow-y-auto p-4">
                 <Link :href="route('dashboard')" :class="['sidebar-item', { 'active': isActive('Core::Dashboard') }]">
@@ -64,14 +57,30 @@ const isActive = (prefix) => {
                 </Link>
 
                 <p class="px-3 pt-4 pb-2 text-xs font-semibold uppercase text-white/50">مدیریت</p>
-                <Link :href="route('persons.index')" :class="['sidebar-item', { 'active': isActive('Persons::') }]">
+                <Link :href="route('persons.index')" :class="['sidebar-item', { 'active': isActive('Persons') }]">
                     <span>اشخاص</span>
                 </Link>
+                <Link :href="route('products.index')" :class="['sidebar-item', { 'active': isActive('Inventory') }]">
+                    <span>کالاها</span>
+                </Link>
+                <Link :href="route('accounts.index')" :class="['sidebar-item', { 'active': isActive('Treasury') }]">
+                    <span>صندوق و بانک</span>
+                </Link>
+
+                <p class="px-3 pt-4 pb-2 text-xs font-semibold uppercase text-white/50">عملیات</p>
+                <Link :href="route('invoices.index')" :class="['sidebar-item', { 'active': isActive('Sales') }]">
+                    <span>فاکتورهای فروش</span>
+                </Link>
+                <Link :href="route('sales_returns.index')" :class="['sidebar-item', { 'active': isActive('Sales::SalesReturns') }]">
+                    برگشت از فروش
+                </Link>
+                <Link :href="route('transactions.index')" :class="['sidebar-item', { 'active': isActive('Treasury::Transactions') }]">
+                    <span>تراکنش‌ها</span>
+                </Link>
+
+                <p class="px-3 pt-4 pb-2 text-xs font-semibold uppercase text-white/50">پیکربندی</p>
                 <Link :href="route('person-groups.index')" :class="['sidebar-item', { 'active': isActive('Persons::PersonGroups') }]">
                     <span>گروه‌های اشخاص</span>
-                </Link>
-                <Link :href="route('products.index')" :class="['sidebar-item', { 'active': isActive('Inventory::Products') }]">
-                    <span>کالاها</span>
                 </Link>
                 <Link :href="route('categories.index')" :class="['sidebar-item', { 'active': isActive('Inventory::Categories') }]">
                     <span>دسته‌بندی‌ها</span>
@@ -82,37 +91,23 @@ const isActive = (prefix) => {
                 <Link :href="route('price-lists.index')" :class="['sidebar-item', { 'active': isActive('Inventory::PriceLists') }]">
                     <span>سطوح قیمت</span>
                 </Link>
-                <Link :href="route('accounts.index')" :class="['sidebar-item', { 'active': isActive('Treasury::Accounts') }]">
-                    <span>صندوق و بانک</span>
-                </Link>
-
-                <p class="px-3 pt-4 pb-2 text-xs font-semibold uppercase text-white/50">عملیات</p>
-                <Link :href="route('invoices.index')" :class="['sidebar-item', { 'active': isActive('Sales::Sales') }]">
-                    <span>فاکتورهای فروش</span>
-                </Link>
-                <Link :href="route('sales_returns.index')" :active="route().current('sales_returns.index')" :class="['sidebar-item', { 'active': isActive('Sales::SalesReturns') }]">
-                    برگشت از فروش
-                </Link>
-                <Link :href="route('transactions.index')" :class="['sidebar-item', { 'active': isActive('Treasury::Transactions') }]">
-                    <span>تراکنش‌ها</span>
-                </Link>
-
-                <p class="px-3 pt-4 pb-2 text-xs font-semibold uppercase text-white/50">پیکربندی</p>
                 <Link :href="route('financial-years.index')" :class="['sidebar-item', { 'active': isActive('Core::FinancialYears') }]">
                     <span>سال مالی</span>
                 </Link>
                 <Link :href="route('settings.index')" :class="['sidebar-item', { 'active': isActive('Core::Settings') }]">
                     <span>تنظیمات</span>
                 </Link>
-
             </nav>
         </aside>
 
-        <!-- Sidebar backdrop for mobile -->
         <div v-show="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 z-20 bg-black/30 backdrop-blur-sm md:hidden" />
 
-        <!-- Main content -->
         <main class="pt-16 md:pr-64">
+            <header class="bg-white shadow-sm" v-if="$slots.header">
+                <div class="mx-auto max-w-full py-4 px-4 sm:px-6 lg:px-8">
+                    <slot name="header" />
+                </div>
+            </header>
             <div class="p-4 sm:p-6 lg:p-8">
                 <slot />
             </div>
@@ -120,3 +115,11 @@ const isActive = (prefix) => {
     </div>
 </template>
 
+<style scoped>
+.sidebar-item {
+    @apply flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10;
+}
+.sidebar-item.active {
+    @apply bg-blue-600 text-white;
+}
+</style>

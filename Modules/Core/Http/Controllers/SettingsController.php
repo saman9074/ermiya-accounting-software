@@ -26,7 +26,8 @@ class SettingsController extends Controller
             'company_name' => 'nullable|string|max:191',
             'company_address' => 'nullable|string',
             'company_phone' => 'nullable|string|max:20',
-            'company_logo' => 'nullable|image|max:1024', // 1MB Max
+            'company_logo' => 'nullable|image|max:1024',
+            'default_print_size' => 'nullable|string|in:A4,A5,Thermal',
         ]);
 
         // Update or create text-based settings

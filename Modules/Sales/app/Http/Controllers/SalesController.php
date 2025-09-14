@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Modules\Core\Models\Setting;
 use Modules\Core\Rules\DateWithinFinancialYear;
 use Modules\Inventory\Models\Product;
 use Modules\Inventory\Models\StockMovement;
@@ -137,6 +138,17 @@ class SalesController extends Controller
             'invoice' => $invoice,
             'companySettings' => $companySettings,
             'accounts' => Account::all(),
+        ]);
+    }
+
+    public function print(Invoice $invoice)
+    {
+        $invoice->load(['person', 'items.product']);
+        $companySettings = Setting::all()->pluck('value', 'key');
+
+        return Inertia::render('Sales::Invoices/Print', [
+            'invoice' => $invoice,
+            'companySettings' => $companySettings,
         ]);
     }
 }
