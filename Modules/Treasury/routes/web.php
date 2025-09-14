@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Treasury\Http\Controllers\ExpenseCategoryController;
 use Modules\Treasury\Http\Controllers\TransactionController;
 use Modules\Treasury\Http\Controllers\TreasuryController;
 
@@ -13,6 +14,8 @@ Route::middleware('auth')->group(function() {
 
     // Routes for managing transactions
     Route::resource('transactions', TransactionController::class)->only(['index', 'edit', 'update', 'destroy']);
+
+    Route::resource('expense-categories', ExpenseCategoryController::class);
 });
 
 
