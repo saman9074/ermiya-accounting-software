@@ -21,7 +21,6 @@ const closePaymentModal = () => {
 };
 
 const formatNumber = (number) => {
-    // اگر ورودی عدد نباشد، صفر برگردان
     if (number === null || typeof number === 'undefined' || isNaN(number)) {
         return formatNumber(0);
     }
@@ -50,6 +49,10 @@ const printInvoice = () => {
                     جزئیات فاکتور شماره: {{ invoice.id }}
                 </h2>
                 <div class="print-hidden">
+                    <Link :href="route('invoices.print', invoice.id)"
+                          class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-md text-sm ml-2">
+                        چاپ پیشرفته
+                    </Link>
                     <Link :href="route('sales_returns.create_from_invoice', invoice.id)"
                           class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-md text-sm ml-2">
                         برگشت از فروش
@@ -58,7 +61,7 @@ const printInvoice = () => {
                         دریافت وجه
                     </button>
                     <button @click="printInvoice" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md text-sm">
-                        چاپ
+                        چاپ ساده
                     </button>
                 </div>
             </div>
@@ -77,9 +80,9 @@ const printInvoice = () => {
                     <div class="p-8 text-gray-900">
                         <div class="flex justify-between items-start border-b-2 pb-6 mb-6">
                             <div>
-                                <h1 class="text-2xl font-bold">{{ companySettings.name || 'نام شرکت' }}</h1>
-                                <p>{{ companySettings.address || 'آدرس شرکت' }}</p>
-                                <p>تلفن: {{ companySettings.phone || 'تلفن شرکت' }}</p>
+                                <h1 class="text-2xl font-bold">{{ companySettings.company_name || 'نام شرکت' }}</h1>
+                                <p>{{ companySettings.company_address || 'آدرس شرکت' }}</p>
+                                <p>تلفن: {{ companySettings.company_phone || 'تلفن شرکت' }}</p>
                             </div>
                             <div class="text-left">
                                 <h2 class="text-xl font-bold">فاکتور فروش</h2>

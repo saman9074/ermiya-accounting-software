@@ -16,8 +16,13 @@ class TransactionController extends Controller
 
     public function index()
     {
+        // Eager load all necessary relationships
+        $transactions = Transaction::with(['account', 'transactionable'])
+            ->latest('transaction_date')
+            ->get();
+
         return Inertia::render('Treasury::Transactions/Index', [
-            'transactions' => Transaction::with(['account', 'transactionable'])->orderBy('transaction_date', 'desc')->get(),
+            'transactions' => $transactions,
         ]);
     }
 
