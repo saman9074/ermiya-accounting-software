@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Modules\Sales\Models\Invoice;
+use Modules\Treasury\Models\ExpenseCategory;
+use Modules\Treasury\Models\Payee;
 use Modules\Treasury\Models\Transaction;
 use Modules\Treasury\Models\Account;
 use Inertia\Inertia;
@@ -16,8 +18,7 @@ class TransactionController extends Controller
 
     public function index()
     {
-        // Eager load all necessary relationships
-        $transactions = Transaction::with(['account', 'transactionable'])
+        $transactions = Transaction::with(['account', 'transactionable', 'expenseCategory', 'payee'])
             ->latest('transaction_date')
             ->get();
 
@@ -70,6 +71,8 @@ class TransactionController extends Controller
         return Inertia::render('Treasury::Transactions/Edit', [
             'transaction' => $transaction,
             'accounts' => Account::all(),
+            'categories' => ExpenseCategory::all(),
+            'payees' => Payee::all(),
         ]);
     }
 
@@ -77,37 +80,49 @@ class TransactionController extends Controller
     {
         $validated = $request->validate([
             'account_id' => 'required|exists:accounts,id',
-            'amount' => 'required|numeric|min:0.01',
-            'transaction_date' => ['required', 'date', new DateWithinFinancialYear], // <-- از قانون جدید استفاده می‌کنیم
+            'expense_category_id' => 'nullable|exists:expense_categories,id',
+            'payee_id' => 'nullable|exists:payees,id',
+            'transaction_date' => 'required|date',
+            'amount' => 'required|numeric',
             'description' => 'nullable|string',
+            'attachment' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
         ]);
 
-        DB::transaction(function () use ($request, $validated, $transaction) {
+        // Note: Reversing old transaction and creating a new one is safer for complex accounting.
+        // For simplicity, we are updating in-place.
+        DB::transaction(function () use ($validated, $request, $transaction) {
             $oldAmount = $transaction->amount;
-            $oldAccount = $transaction->account;
+            $oldAccountId = $transaction->account_id;
 
-            $newAmount = $validated['amount'];
-            $newAccount = Account::find($validated['account_id']);
-
-            // Reverse the old transaction's effect
-            $oldAccount->decrement('current_balance', $oldAmount);
-            if ($transaction->transactionable_type === Invoice::class) {
-                $transaction->transactionable->decrement('paid_amount', $oldAmount);
-            }
-
-            // Apply the new transaction's effect
-            $newAccount->increment('current_balance', $newAmount);
-            if ($transaction->transactionable_type === Invoice::class) {
-                $transaction->transactionable->increment('paid_amount', $newAmount);
-                $transaction->transactionable->payment_status = $transaction->transactionable->paid_amount >= $transaction->transactionable->total_amount ? 'paid' : 'partial';
-                if ($transaction->transactionable->paid_amount <= 0) {
-                    $transaction->transactionable->payment_status = 'unpaid';
+            $path = $transaction->attachment;
+            if ($request->hasFile('attachment')) {
+                // Delete old attachment if exists
+                if ($path) {
+                    Storage::disk('public')->delete($path);
                 }
-                $transaction->transactionable->save();
+                $path = $request->file('attachment')->store('attachments', 'public');
             }
 
-            // Update the transaction itself
-            $transaction->update($validated);
+            // Update transaction details
+            $transaction->update([
+                'account_id' => $validated['account_id'],
+                'expense_category_id' => $validated['expense_category_id'] ?? null,
+                'payee_id' => $validated['payee_id'] ?? null,
+                'transaction_date' => $validated['transaction_date'],
+                'amount' => $transaction->type === 'expense' ? -abs($validated['amount']) : abs($validated['amount']),
+                'description' => $validated['description'],
+                'attachment' => $path,
+            ]);
+
+            // Update account balances
+            // 1. Revert old transaction amount
+            if ($oldAccountId) {
+                Account::find($oldAccountId)->increment('current_balance', abs($oldAmount));
+            }
+
+            // 2. Apply new transaction amount
+            Account::find($validated['account_id'])->decrement('current_balance', abs($validated['amount']));
+
         });
 
         return redirect()->route('transactions.index')->with('success', 'تراکنش با موفقیت ویرایش شد.');
@@ -116,29 +131,22 @@ class TransactionController extends Controller
 
     public function destroy(Transaction $transaction)
     {
-        DB::transaction(function () use ($transaction) {
-            // Reverse the financial effects before deleting
-            $account = $transaction->account;
-            $account->decrement('current_balance', $transaction->amount);
+        DB::transaction(function() use ($transaction){
+            if($transaction->account_id){
+                $amountToRevert = $transaction->amount;
+                // If it's an expense (negative), adding it will increase the balance.
+                // If it's an income (positive), subtracting it will decrease the balance.
+                $transaction->account->increment('current_balance', -$amountToRevert);
+            }
 
-            if ($transaction->transactionable_type === Invoice::class) {
-                $invoice = $transaction->transactionable;
-                $invoice->decrement('paid_amount', $transaction->amount);
-
-                // Update invoice status after reversal
-                if ($invoice->paid_amount >= $invoice->total_amount) {
-                    $invoice->payment_status = 'paid';
-                } elseif ($invoice->paid_amount > 0 && $invoice->paid_amount < $invoice->total_amount) {
-                    $invoice->payment_status = 'partial';
-                } else {
-                    $invoice->payment_status = 'unpaid';
-                }
-                $invoice->save();
+            // Delete attachment if exists
+            if ($transaction->attachment) {
+                Storage::disk('public')->delete($transaction->attachment);
             }
 
             $transaction->delete();
         });
 
-        return redirect()->route('transactions.index')->with('success', 'تراکنش با موفقیت حذف شد.');
+        return back()->with('success', 'تراکنش با موفقیت حذف شد.');
     }
 }

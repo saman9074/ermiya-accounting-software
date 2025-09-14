@@ -77,10 +77,17 @@ const isActive = (prefix) => {
                 <Link :href="route('transactions.index')" :class="['sidebar-item', { 'active': isActive('Treasury::Transactions') }]">
                     <span>تراکنش‌ها</span>
                 </Link>
+                <Link :href="route('payments.create')" :class="['sidebar-item', { 'active': isActive('Treasury::Payments') }]">
+                    <span>ثبت هزینه / پرداخت</span>
+                </Link>
 
                 <p class="px-3 pt-4 pb-2 text-xs font-semibold uppercase text-white/50">پیکربندی</p>
                 <Link :href="route('expense-categories.index')" :class="['sidebar-item', { 'active': isActive('Treasury::ExpenseCategories') }]">
                     <span>دسته‌بندی هزینه‌ها</span>
+                </Link>
+
+                <Link :href="route('payees.index')" :class="['sidebar-item', { 'active': isActive('Treasury::Payees') }]">
+                    <span>طرف حساب‌ها</span>
                 </Link>
                 <Link :href="route('person-groups.index')" :class="['sidebar-item', { 'active': isActive('Persons::PersonGroups') }]">
                     <span>گروه‌های اشخاص</span>

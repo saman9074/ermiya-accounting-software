@@ -18,6 +18,7 @@ class Transaction extends Model
         'type',
         'amount',
         'transaction_date',
+        'expense_category_id',
         'description',
     ];
 
@@ -40,5 +41,21 @@ class Transaction extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    /**
+     * Get the expense category that owns the transaction.
+     */
+    public function expenseCategory(): BelongsTo
+    {
+        return $this->belongsTo(ExpenseCategory::class);
+    }
+
+    /**
+     * Get the payee that owns the transaction.
+     */
+    public function payee(): BelongsTo
+    {
+        return $this->belongsTo(Payee::class);
     }
 }
