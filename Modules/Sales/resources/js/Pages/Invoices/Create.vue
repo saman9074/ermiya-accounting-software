@@ -137,6 +137,7 @@ import AuthenticatedLayout from '@Core/Layouts/AuthenticatedLayout.vue';
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">تاریخ صدور</label>
                                     <input type="date" v-model="form.issue_date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                    <div v-if="form.errors.issue_date" class="text-sm text-red-600 mt-1">{{ form.errors.issue_date }}</div>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">تاریخ سررسید</label>

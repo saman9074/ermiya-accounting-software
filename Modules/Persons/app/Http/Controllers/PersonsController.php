@@ -14,11 +14,22 @@ use Modules\Treasury\Models\Transaction;
 
 class PersonsController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request)
     {
-        // Eager load the group relationship for efficiency
-        $persons = Person::with('group')->get();
-        return Inertia::render('Persons::Index', ['persons' => $persons]);
+        $persons = Person::query()
+            ->when($request->input('search'), function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            })
+            ->with('group')
+            ->latest()
+            ->paginate(15)
+            ->withQueryString(); // برای حفظ پارامترهای جستجو در لینک‌های صفحه‌بندی
+
+        return Inertia::render('Persons::Index', [
+            'persons' => $persons,
+            'filters' => $request->only(['search']), // ارسال فیلترهای فعلی به ویو
+        ]);
     }
 
     public function create(): Response

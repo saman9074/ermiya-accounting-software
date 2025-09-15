@@ -10,10 +10,20 @@ use Modules\Persons\Models\PersonGroup;
 
 class PersonGroupController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $personGroups = PersonGroup::query()
+            ->when($request->input('search'), function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%");
+            })
+            ->with('priceList')
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
         return Inertia::render('Persons::PersonGroups/Index', [
-            'personGroups' => PersonGroup::with('priceList')->get(),
+            'personGroups' => $personGroups,
+            'filters' => $request->only(['search']),
         ]);
     }
 

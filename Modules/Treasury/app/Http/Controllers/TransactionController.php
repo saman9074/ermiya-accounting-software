@@ -16,14 +16,21 @@ use Modules\Core\Rules\DateWithinFinancialYear;
 class TransactionController extends Controller
 {
 
-    public function index()
+    public function index(Request $request)
     {
-        $transactions = Transaction::with(['account', 'transactionable', 'expenseCategory', 'payee'])
+        $transactions = Transaction::query()
+            ->when($request->input('search'), function ($query, $search) {
+                $query->where('description', 'like', "%{$search}%")
+                    ->orWhere('amount', '=', $search);
+            })
+            ->with(['account', 'transactionable', 'expenseCategory', 'payee'])
             ->latest('transaction_date')
-            ->get();
+            ->paginate(15)
+            ->withQueryString();
 
         return Inertia::render('Treasury::Transactions/Index', [
             'transactions' => $transactions,
+            'filters' => $request->only(['search']),
         ]);
     }
 

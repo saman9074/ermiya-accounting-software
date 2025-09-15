@@ -2,18 +2,32 @@
 
 namespace Modules\Core\Http\Controllers;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Modules\Core\Models\FinancialYear;
+use Modules\Core\Models\Setting;
 
 class FinancialYearController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $financialYears = FinancialYear::query()
+            ->when($request->input('search'), function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%");
+            })
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
+        // از خود جدول می‌خوانیم که کدام سال فعال است
+        $activeYear = FinancialYear::where('is_active', true)->first();
+
         return Inertia::render('Core::FinancialYears/Index', [
-            'financialYears' => FinancialYear::orderBy('start_date', 'desc')->get(),
+            'financialYears' => $financialYears,
+            'filters' => $request->only(['search']),
+            'active_year' => $activeYear ? $activeYear->id : null,
         ]);
     }
 
@@ -25,21 +39,28 @@ class FinancialYearController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:191',
+            'name' => 'required|string|max:255|unique:financial_years,name',
             'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            'is_active' => 'required|boolean',
+            'end_date' => 'required|date|after:start_date',
         ]);
 
-        DB::transaction(function () use ($validated) {
-            if ($validated['is_active']) {
-                // Deactivate all other years
-                FinancialYear::where('is_active', true)->update(['is_active' => false]);
-            }
-            FinancialYear::create($validated);
-        });
+        FinancialYear::create($validated);
 
-        return redirect()->route('financial-years.index')->with('success', 'سال مالی جدید با موفقیت ایجاد شد.');
+        return redirect()->route('financial-years.index')->with('success', 'سال مالی با موفقیت ایجاد شد.');
+    }
+
+    public function activate(FinancialYear $financialYear)
+    {
+        // ===== منطق صحیح فعال‌سازی =====
+        DB::transaction(function () use ($financialYear) {
+            // ۱. همه سال‌های مالی دیگر را غیرفعال کن
+            FinancialYear::query()->update(['is_active' => false]);
+            // ۲. فقط سال مالی انتخاب شده را فعال کن
+            $financialYear->update(['is_active' => true]);
+        });
+        // ==============================
+
+        return redirect()->route('financial-years.index')->with('success', "سال مالی '{$financialYear->name}' با موفقیت فعال شد.");
     }
 
     public function edit(FinancialYear $financialYear)
@@ -52,36 +73,23 @@ class FinancialYearController extends Controller
     public function update(Request $request, FinancialYear $financialYear)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:191',
+            'name' => 'required|string|max:255|unique:financial_years,name,' . $financialYear->id,
             'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            'is_active' => 'required|boolean',
+            'end_date' => 'required|date|after:start_date',
         ]);
 
-        DB::transaction(function () use ($validated, $financialYear) {
-            if ($validated['is_active']) {
-                // Deactivate all other years
-                FinancialYear::where('id', '!=', $financialYear->id)->where('is_active', true)->update(['is_active' => false]);
-            }
-            $financialYear->update($validated);
-        });
+        $financialYear->update($validated);
 
         return redirect()->route('financial-years.index')->with('success', 'سال مالی با موفقیت ویرایش شد.');
     }
 
     public function destroy(FinancialYear $financialYear)
     {
+        if ($financialYear->is_active) {
+            return redirect()->route('financial-years.index')->with('error', 'امکان حذف سال مالی فعال وجود ندارد.');
+        }
+
         $financialYear->delete();
         return redirect()->route('financial-years.index')->with('success', 'سال مالی با موفقیت حذف شد.');
-    }
-
-    public function activate(FinancialYear $financialYear)
-    {
-        DB::transaction(function () use ($financialYear) {
-            FinancialYear::where('is_active', true)->update(['is_active' => false]);
-            $financialYear->update(['is_active' => true]);
-        });
-
-        return back()->with('success', "سال مالی '{$financialYear->name}' فعال شد.");
     }
 }

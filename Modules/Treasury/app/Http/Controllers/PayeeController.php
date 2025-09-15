@@ -8,9 +8,20 @@ use Modules\Treasury\Models\Payee;
 
 class PayeeController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return Inertia::render('Treasury::Payees/Index', ['payees' => Payee::latest()->get()]);
+        $payees = Payee::query()
+            ->when($request->input('search'), function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%");
+            })
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
+        return Inertia::render('Treasury::Payees/Index', [
+            'payees' => $payees,
+            'filters' => $request->only(['search']),
+        ]);
     }
 
     public function create()

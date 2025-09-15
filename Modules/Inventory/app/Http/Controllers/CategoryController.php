@@ -9,15 +9,29 @@ use Modules\Inventory\Models\Category;
 
 class CategoryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        // Eager load all descendants recursively and get only top-level categories
-        $categories = Category::with('childrenRecursive')
+        // دریافت همه دسته‌بندی‌ها و ساختن ساختار درختی
+        $categories = Category::query()
+            ->when($request->input('search'), function ($query, $search) {
+                // جستجو در والد و فرزندان
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhereHas('parent', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%");
+                    });
+            })
+            ->with('parent')
+            // دریافت والدترین دسته‌بندی‌ها (آنهایی که parent_id ندارند) به همراه فرزندانشان
             ->whereNull('parent_id')
+            ->with('childrenRecursive') // لود کردن تمام زیرمجموعه‌ها به صورت بازگشتی
             ->get();
 
+
         return Inertia::render('Inventory::Categories/Index', [
-            'categories' => $categories
+            // ما دیگر از paginate استفاده نمی‌کنیم چون ساختار درختی است
+            // برای دسته‌بندی‌ها که تعدادشان معمولا کم است، این روش بهتر است.
+            'categories' => $categories,
+            'filters' => $request->only(['search']),
         ]);
     }
 

@@ -11,11 +11,19 @@ class TreasuryController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
+        $accounts = Account::query()
+            ->when($request->input('search'), function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%");
+            })
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
         return Inertia::render('Treasury::Accounts/Index', [
-            'accounts' => Account::all(),
-            'success' => session('success'),
+            'accounts' => $accounts,
+            'filters' => $request->only(['search']),
         ]);
     }
 

@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 // use Modules\Core\Database\Factories\FinancialYearFactory;
 use Illuminate\Support\Facades\Cache;
+use Morilog\Jalali\Jalalian;
+
 class FinancialYear extends Model
 {
     use HasFactory;
@@ -26,6 +28,27 @@ class FinancialYear extends Model
         'end_date' => 'date:Y-m-d',
     ];
 
+    protected $appends = ['start_date_jalali', 'end_date_jalali'];
+
+    /**
+     * Get the start date in Jalali format.
+     *
+     * @return string
+     */
+    public function getStartDateJalaliAttribute()
+    {
+        return Jalalian::fromCarbon($this->start_date)->format('Y/m/d');
+    }
+
+    /**
+     * Get the end date in Jalali format.
+     *
+     * @return string
+     */
+    public function getEndDateJalaliAttribute()
+    {
+        return Jalalian::fromCarbon($this->end_date)->format('Y/m/d');
+    }
 
     /**
      * The "booted" method of the model.

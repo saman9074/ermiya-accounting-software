@@ -9,10 +9,19 @@ use Modules\Inventory\Models\Unit;
 
 class UnitController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $units = Unit::query()
+            ->when($request->input('search'), function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%");
+            })
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
         return Inertia::render('Inventory::Units/Index', [
-            'units' => Unit::all(),
+            'units' => $units,
+            'filters' => $request->only(['search']),
         ]);
     }
 

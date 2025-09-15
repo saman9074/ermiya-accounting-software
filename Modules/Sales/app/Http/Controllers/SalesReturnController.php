@@ -143,14 +143,23 @@ class SalesReturnController extends Controller
         return redirect()->route('invoices.show', $invoice->id)->with('success', 'فاکتور برگشت از فروش با موفقیت ثبت شد.');
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $salesReturns = SalesReturn::with('person', 'invoice')
+        $salesReturns = SalesReturn::query()
+            ->when($request->input('search'), function ($query, $search) {
+                $query->where('id', $search)
+                    ->orWhereHas('person', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%");
+                    });
+            })
+            ->with('person', 'invoice')
             ->latest()
-            ->paginate(10);
+            ->paginate(15)
+            ->withQueryString();
 
         return Inertia::render('Sales::SalesReturns/Index', [
             'salesReturns' => $salesReturns,
+            'filters' => $request->only(['search']),
         ]);
     }
 

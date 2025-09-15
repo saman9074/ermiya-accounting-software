@@ -9,10 +9,19 @@ use Modules\Treasury\Models\ExpenseCategory;
 
 class ExpenseCategoryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $categories = ExpenseCategory::query()
+            ->when($request->input('search'), function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%");
+            })
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
         return Inertia::render('Treasury::ExpenseCategories/Index', [
-            'categories' => ExpenseCategory::latest()->get(),
+            'categories' => $categories,
+            'filters' => $request->only(['search']),
         ]);
     }
 

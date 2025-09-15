@@ -17,11 +17,21 @@ class InventoryController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $products = Product::with('unit')->latest()->get();
+        $products = Product::query()
+            ->when($request->input('search'), function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('sku', 'like', "%{$search}%");
+            })
+            ->with('unit')
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
         return Inertia::render('Inventory::Index', [
             'products' => $products,
+            'filters' => $request->only(['search']),
         ]);
     }
 
@@ -139,6 +149,11 @@ class InventoryController extends Controller
      */
     public function destroy(Product $product)
     {
+        // اگر کالا گردش انبار داشته باشد، اجازه حذف نمی‌دهیم
+        if ($product->stockMovements()->exists()) {
+            return back()->with('error', 'این کالا به دلیل داشتن گردش انبار قابل حذف نیست.');
+        }
+
         $product->delete();
         return redirect()->route('products.index')->with('success', 'کالا با موفقیت حذف شد.');
     }

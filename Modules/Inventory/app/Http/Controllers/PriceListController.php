@@ -9,10 +9,19 @@ use Modules\Inventory\Models\PriceList;
 
 class PriceListController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $priceLists = PriceList::query()
+            ->when($request->input('search'), function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%");
+            })
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
         return Inertia::render('Inventory::PriceLists/Index', [
-            'priceLists' => PriceList::all(),
+            'priceLists' => $priceLists,
+            'filters' => $request->only(['search']),
         ]);
     }
 
@@ -30,7 +39,9 @@ class PriceListController extends Controller
 
     public function edit(PriceList $priceList)
     {
-        return Inertia::render('Inventory::PriceLists/Edit', ['priceList' => $priceList]);
+        return Inertia::render('Inventory::PriceLists/Edit', [
+            'priceList' => $priceList,
+        ]);
     }
 
     public function update(Request $request, PriceList $priceList)

@@ -17,11 +17,23 @@ use Modules\Treasury\Models\Account;
 
 class SalesController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $invoices = Invoice::with('person')->latest()->paginate(10);
+        $invoices = Invoice::query()
+            ->when($request->input('search'), function ($query, $search) {
+                $query->where('id', $search) // جستجو بر اساس شماره فاکتور
+                ->orWhereHas('person', function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%"); // جستجو بر اساس نام مشتری
+                });
+            })
+            ->with('person')
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
         return Inertia::render('Sales::Invoices/Index', [
             'invoices' => $invoices,
+            'filters' => $request->only(['search']),
         ]);
     }
 
