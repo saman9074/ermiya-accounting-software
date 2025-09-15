@@ -4,6 +4,7 @@ import AuthenticatedLayout from '@Core/Layouts/AuthenticatedLayout.vue';
     import { ref, computed, watch } from 'vue';
     import vSelect from "vue-select";
     import "vue-select/dist/vue-select.css";
+import JalaliDatePicker from '@Core/Components/JalaliDatePicker.vue';
 
     const props = defineProps({
     persons: Array,
@@ -136,12 +137,12 @@ import AuthenticatedLayout from '@Core/Layouts/AuthenticatedLayout.vue';
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">تاریخ صدور</label>
-                                    <input type="date" v-model="form.issue_date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                    <JalaliDatePicker v-model="form.issue_date" class="mt-1" />
                                     <div v-if="form.errors.issue_date" class="text-sm text-red-600 mt-1">{{ form.errors.issue_date }}</div>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">تاریخ سررسید</label>
-                                    <input type="date" v-model="form.due_date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                    <JalaliDatePicker v-model="form.due_date" class="mt-1" />
                                 </div>
                             </div>
 

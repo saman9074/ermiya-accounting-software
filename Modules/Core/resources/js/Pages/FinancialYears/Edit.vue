@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@Core/Layouts/AuthenticatedLayout.vue';
 import { Head, useForm, Link } from '@inertiajs/vue3';
+import JalaliDatePicker from '@Core/Components/JalaliDatePicker.vue';
 
 const props = defineProps({
     financialYear: Object,
@@ -35,12 +36,12 @@ const submit = () => {
                     </div>
                     <div>
                         <label for="start_date" class="block font-medium text-sm text-gray-700">تاریخ شروع</label>
-                        <input v-model="form.start_date" id="start_date" type="date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                        <JalaliDatePicker id="start_date" v-model="form.start_date" class="mt-1" />
                         <div v-if="form.errors.start_date" class="text-red-600 text-sm mt-1">{{ form.errors.start_date }}</div>
                     </div>
                     <div>
                         <label for="end_date" class="block font-medium text-sm text-gray-700">تاریخ پایان</label>
-                        <input v-model="form.end_date" id="end_date" type="date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                        <JalaliDatePicker id="end_date" v-model="form.end_date" class="mt-1" />
                         <div v-if="form.errors.end_date" class="text-red-600 text-sm mt-1">{{ form.errors.end_date }}</div>
                     </div>
                     <div class="flex items-center">
