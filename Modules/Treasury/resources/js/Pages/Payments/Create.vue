@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@Core/Layouts/AuthenticatedLayout.vue';
 import { Head, useForm, Link } from '@inertiajs/vue3';
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
+import JalaliDatePicker from '@Core/Components/JalaliDatePicker.vue';
 
 defineProps({
     accounts: Array,
@@ -45,7 +46,7 @@ const submit = () => {
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label for="transaction_date">تاریخ</label>
-                                    <input id="transaction_date" type="date" v-model="form.transaction_date" class="block w-full mt-1" required>
+                                    <JalaliDatePicker id="transaction_date" v-model="form.transaction_date" class="block w-full mt-1" required />
                                 </div>
                                 <div>
                                     <label for="amount">مبلغ</label>

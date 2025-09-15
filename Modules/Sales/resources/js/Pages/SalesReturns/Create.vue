@@ -1,5 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@Core/Layouts/AuthenticatedLayout.vue';
+import JalaliDatePicker from '@Core/Components/JalaliDatePicker.vue';
 
 import { Head, useForm } from '@inertiajs/vue3';
 import { computed, defineProps } from 'vue';
@@ -74,7 +75,7 @@ const formatNumber = (number) => {
                                 </div>
                                 <div>
                                     <label for="return_date" class="block text-sm font-medium text-gray-700">تاریخ برگشت</label>
-                                    <input type="date" v-model="form.return_date" id="return_date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                                    <JalaliDatePicker id="return_date" v-model="form.return_date" class="block w-full mt-1" required />
                                 </div>
                             </div>
 
