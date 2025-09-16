@@ -86,7 +86,7 @@ class SalesReturnController extends Controller
 
         $totalReturnAmountInRials = $totalReturnAmount * $divisor;
 
-        $salesReturn = DB::transaction(function () use ($validated, $invoice, $totalReturnAmountInRials, $divisor) {
+        DB::transaction(function () use ($validated, $invoice, $totalReturnAmountInRials, $divisor) {
 
             $salesReturn = SalesReturn::create([
                 'invoice_id' => $invoice->id,
@@ -128,21 +128,8 @@ class SalesReturnController extends Controller
                 'account_id' => null,
             ]);
 
-            // به‌روزرسانی مجدد مبلغ پرداختی و وضعیت فاکتور اصلی
-            $totalPaid = $invoice->transactions()->where('type', 'income')->sum('amount') - $totalReturnAmountInRials;
-            $invoice->paid_amount = $totalPaid;
-
-            if (abs($invoice->paid_amount - $invoice->total_amount) < 0.01) {
-                $invoice->status = 'paid';
-            } elseif ($invoice->paid_amount > 0) {
-                $invoice->status = 'partially_paid';
-            } else {
-                $invoice->status = 'unpaid';
-            }
-            $invoice->save();
-
-
-            return $salesReturn;
+            // === فراخوانی متد برای به‌روزرسانی وضعیت فاکتور ===
+            $this->updateInvoiceStatus($invoice);
         });
 
         return redirect()->route('invoices.show', $invoice->id)->with('success', 'فاکتور برگشت از فروش با موفقیت ثبت شد.');
@@ -171,7 +158,7 @@ class SalesReturnController extends Controller
     public function destroy(SalesReturn $salesReturn)
     {
         DB::transaction(function () use ($salesReturn) {
-            $invoice = $salesReturn->invoice; // <-- فاکتور مرجع را می‌گیریم
+            $invoice = $salesReturn->invoice;
 
             // ۱. برگرداندن موجودی انبار
             foreach ($salesReturn->items as $item) {
@@ -187,23 +174,51 @@ class SalesReturnController extends Controller
             $salesReturn->transactions()->delete();
             $salesReturn->delete();
 
-            // ۳. اصلاح ۲: به‌روزرسانی مجدد مبالغ و وضعیت فاکتور اصلی
+            // ۳. به‌روزرسانی وضعیت فاکتور اصلی با استفاده از متد مشترک
             if ($invoice) {
-                $totalPaidAndReturns = $invoice->transactions()->where('type', 'income')->sum('amount');
-                $invoice->paid_amount = $totalPaidAndReturns;
-
-                if (abs($invoice->paid_amount - $invoice->total_amount) < 0.01) { // Check for floating point inaccuracies
-                    $invoice->status = 'paid';
-                } elseif ($invoice->paid_amount > 0) {
-                    $invoice->status = 'partially_paid';
-                } else {
-                    $invoice->status = 'unpaid';
-                }
-                $invoice->save();
+                $this->updateInvoiceStatus($invoice);
             }
         });
 
-        // اصلاح ۳: ریدایرکت به صفحه نمایش فاکتور
         return redirect()->route('invoices.show', $salesReturn->invoice_id)->with('success', 'سند برگشت از فروش با موفقیت حذف شد.');
+    }
+
+    /**
+     * متد مشترک برای محاسبه و به‌روزرسانی وضعیت فاکتور
+     * @param Invoice $invoice
+     */
+    private function updateInvoiceStatus(Invoice $invoice)
+    {
+        // رفرش کردن مدل برای دریافت آخرین داده‌ها از دیتابیس
+        $invoice->refresh();
+
+        // ۱. مجموع تمام پرداخت‌های مثبت (دریافت وجه)
+        $totalPayments = $invoice->transactions()->where('type', 'income')->where('amount', '>', 0)->sum('amount');
+
+        // ۲. مجموع کل مبالغ مرجوعی
+        $totalReturned = $invoice->salesReturns()->sum('total_amount');
+
+        // ۳. مبلغ پرداختی نهایی فاکتور (پرداختی‌ها منهای برگشتی‌ها)
+        $invoice->paid_amount = $totalPayments - $totalReturned;
+
+        // ۴. تعیین وضعیت فاکتور با اولویت‌بندی صحیح
+        // اولویت اول: آیا فاکتور به طور کامل مرجوع شده است؟
+        if (abs($totalReturned - $invoice->total_amount) < 0.01) {
+            $invoice->status = 'returned';
+        }
+        // اولویت دوم: آیا فاکتور به طور کامل پرداخت شده است؟
+        elseif (abs($invoice->paid_amount - $invoice->total_amount) < 0.01) {
+            $invoice->status = 'paid';
+        }
+        // اولویت سوم: آیا بخشی از مبلغ پرداخت شده است؟
+        elseif ($invoice->paid_amount > 0.001) {
+            $invoice->status = 'partially_paid';
+        }
+        // در غیر این صورت، فاکتور پرداخت نشده است
+        else {
+            $invoice->status = 'unpaid';
+        }
+
+        $invoice->save();
     }
 }

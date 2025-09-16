@@ -1,6 +1,9 @@
 <script setup>
 import AuthenticatedLayout from '@Core/Layouts/AuthenticatedLayout.vue';
 import { Head, useForm, Link } from '@inertiajs/vue3';
+import { useCurrency } from '@Core/composables/useCurrency';
+
+const { activeCurrency } = useCurrency();
 
 const form = useForm({
     name: '',
@@ -40,7 +43,7 @@ const submit = () => {
 
                 <!-- Initial Balance -->
                 <div class="mt-4">
-                    <label for="initial_balance" class="block font-medium text-sm text-gray-700">موجودی اولیه</label>
+                    <label for="initial_balance" class="block font-medium text-sm text-gray-700">موجودی اولیه ({{ activeCurrency.display_name }})</label>
                     <input v-model="form.initial_balance" id="initial_balance" type="number" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
                     <div v-if="form.errors.initial_balance" class="text-red-600 text-sm mt-1">{{ form.errors.initial_balance }}</div>
                 </div>

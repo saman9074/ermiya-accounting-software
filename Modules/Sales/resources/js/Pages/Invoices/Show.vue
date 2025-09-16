@@ -6,6 +6,19 @@ import ReceivePaymentModal from '@Sales/Components/ReceivePaymentModal.vue';
 import { useCurrency } from '@Core/composables/useCurrency';
 
 const { formatCurrency, activeCurrency } = useCurrency();
+
+import { computed } from 'vue';
+
+const isPayable = computed(() => {
+    const remainingAmount = props.invoice.total_amount - props.invoice.paid_amount;
+    // با یک تلورانس کوچک برای خطاهای ممیز شناور مقایسه شود
+    return remainingAmount > 0.001 && props.invoice.status !== 'returned';
+});
+
+// این دکمه باید فعال باشد اگر وضعیت فاکتور 'مرجوعی' نباشد
+const isReturnable = computed(() => {
+    return props.invoice.status !== 'returned';
+});
 const props = defineProps({
     invoice: Object,
     companySettings: Object,
@@ -50,18 +63,26 @@ const printInvoice = () => {
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                     جزئیات فاکتور شماره: {{ invoice.id }}
                 </h2>
-                <div class="print-hidden">
+                <div class="mt-6 flex justify-end print-hidden">
                     <Link :href="route('invoices.print', invoice.id)"
                           class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-md text-sm ml-2">
                         چاپ پیشرفته
                     </Link>
-                    <Link :href="route('sales_returns.create_from_invoice', invoice.id)"
-                          class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-md text-sm ml-2">
+
+                    <Link :as="isReturnable ? 'a' : 'span'"
+                          :href="isReturnable ? route('sales_returns.create_from_invoice', invoice.id) : null"
+                          :class="['bg-yellow-500 text-white font-bold py-2 px-4 rounded-md text-sm ml-2 transition-opacity',
+                                   { 'opacity-50 cursor-not-allowed': !isReturnable, 'hover:bg-yellow-600': isReturnable }]">
                         برگشت از فروش
                     </Link>
-                    <button @click="openPaymentModal" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md text-sm ml-2">
+
+                    <button @click="openPaymentModal"
+                            :disabled="!isPayable"
+                            :class="['bg-green-500 text-white font-bold py-2 px-4 rounded-md text-sm ml-2 transition-opacity',
+                                     { 'opacity-50 cursor-not-allowed': !isPayable, 'hover:bg-green-600': isPayable }]">
                         دریافت وجه
                     </button>
+
                     <button @click="printInvoice" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md text-sm">
                         چاپ ساده
                     </button>

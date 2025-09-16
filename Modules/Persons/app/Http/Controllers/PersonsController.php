@@ -89,29 +89,17 @@ class PersonsController extends Controller
         // دریافت تمام فاکتورهای شخص
         $invoices = $person->invoices()->with('items')->get();
 
-        // <--- شروع تغییرات --->
-        // دریافت تمام تراکنش‌های دریافتی که مرجع آنها فاکتورهای مربوط به این شخص است
-        $transactions = Transaction::where('type', 'income')
-            ->whereHasMorph(
-                'transactionable', // <-- نام صحیح رابطه از روی مدل Transaction
-                [Invoice::class],
-                function ($query) use ($person) {
-                    $query->where('person_id', $person->id);
-                }
-            )
+        $invoiceIds = $person->invoices()->pluck('id');
+        $transactions = Transaction::whereIn('transactionable_id', $invoiceIds)
+            ->where('transactionable_type', Invoice::class)
             ->get();
-        // <--- پایان تغییرات --->
-
-        // محاسبه مانده نهایی
         $total_invoices = $invoices->sum('total_amount');
-        $total_paid = $transactions->sum('amount');
+        $total_paid = $transactions->sum('amount'); // جمع جبری تراکنش‌ها
         $balance = $total_invoices - $total_paid;
-
 
         return Inertia::render('Persons::AccountStatement', [
             'person' => $person,
             'invoices' => $invoices,
-            'transactions' => $transactions,
             'balance' => $balance,
             'total_invoices' => $total_invoices,
             'total_paid' => $total_paid

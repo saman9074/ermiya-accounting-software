@@ -67,12 +67,14 @@ class Invoice extends Model
         return $this->hasMany(SalesReturn::class);
     }
     protected $appends = ['translated_status'];
+
     public function getTranslatedStatusAttribute(): string
     {
         return match ($this->status) {
             'unpaid' => 'پرداخت نشده',
             'paid' => 'پرداخت شده',
-            'partial' => 'پرداخت ناقص',
+            'partially_paid' => 'پرداخت ناقص',
+            'returned' => 'مرجوعی',
             default => $this->status,
         };
     }

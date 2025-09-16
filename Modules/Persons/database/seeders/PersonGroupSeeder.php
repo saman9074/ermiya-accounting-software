@@ -16,10 +16,10 @@ class PersonGroupSeeder extends Seeder
         $collaboratorPriceList = PriceList::where('name', 'قیمت همکار')->first();
 
         $groups = [
-            ['name' => 'عادی', 'description' => 'مشتریان عمومی'],
+            ['name' => 'عادی'],
             // اگر لیست قیمت همکار وجود داشت، آن را به گروه همکار متصل می‌کنیم
-            ['name' => 'همکار', 'description' => 'همکاران و فروشندگان', 'price_list_id' => $collaboratorPriceList?->id],
-            ['name' => 'ویژه', 'description' => 'مشتریان خاص'],
+            ['name' => 'همکار', 'price_list_id' => $collaboratorPriceList?->id],
+            ['name' => 'ویژه'],
         ];
 
         foreach ($groups as $group) {

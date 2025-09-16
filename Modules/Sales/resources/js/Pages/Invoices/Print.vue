@@ -27,7 +27,9 @@ const formatDate = (dateString) => {
     });
 };
 
+
 const logoUrl = computed(() => {
+    // آدرس باید از storage خوانده شود
     return props.companySettings.company_logo ? `/storage/${props.companySettings.company_logo}` : null;
 });
 </script>
