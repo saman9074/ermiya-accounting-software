@@ -1,23 +1,29 @@
 <script setup>
 import AuthenticatedLayout from '@Core/Layouts/AuthenticatedLayout.vue';
 import JalaliDatePicker from '@Core/Components/JalaliDatePicker.vue';
-
+import { useCurrency } from '@Core/composables/useCurrency';
 import { Head, useForm } from '@inertiajs/vue3';
-import { computed, defineProps } from 'vue';
+import { computed } from 'vue';
 
 const props = defineProps({
     invoice: Object,
 });
 
+// ۱. ایمپورت کامل توابع مورد نیاز
+const { activeCurrency, formatNumber, fromBaseCurrency } = useCurrency();
+
 const form = useForm({
-    // ...
+    invoice_id: props.invoice.id,
+    return_date: new Date().toISOString().slice(0, 10),
+    description: '',
+    // ۲. قیمت واحد هر آیتم را با تابع fromBaseCurrency تبدیل می‌کنیم
     items: props.invoice.items.map(item => ({
         product_id: item.product_id,
         name: item.product.name,
         original_quantity: item.quantity,
-        returnable_quantity: item.returnable_quantity, // داده جدید
+        returnable_quantity: item.returnable_quantity,
         quantity: 0,
-        unit_price: item.unit_price,
+        unit_price: fromBaseCurrency(item.unit_price), // <-- اصلاح اصلی اینجا
     })),
 });
 
@@ -28,13 +34,12 @@ const totalReturnAmount = computed(() => {
 });
 
 const submit = () => {
-    // Filter out items with 0 quantity before submitting
     const itemsToSubmit = form.items
         .filter(item => item.quantity > 0)
         .map(item => ({
             product_id: item.product_id,
             quantity: item.quantity,
-            unit_price: item.unit_price,
+            unit_price: item.unit_price, // قیمت به واحد پول نمایشی ارسال می‌شود
         }));
 
     if (itemsToSubmit.length === 0) {
@@ -46,10 +51,6 @@ const submit = () => {
         ...data,
         items: itemsToSubmit,
     })).post(route('sales_returns.store'));
-};
-
-const formatNumber = (number) => {
-    return new Intl.NumberFormat('fa-IR').format(number);
 };
 </script>
 
@@ -76,6 +77,7 @@ const formatNumber = (number) => {
                                 <div>
                                     <label for="return_date" class="block text-sm font-medium text-gray-700">تاریخ برگشت</label>
                                     <JalaliDatePicker id="return_date" v-model="form.return_date" class="block w-full mt-1" required />
+                                    <div v-if="form.errors.return_date" class="text-sm text-red-600 mt-1">{{ form.errors.return_date }}</div>
                                 </div>
                             </div>
 
@@ -85,22 +87,24 @@ const formatNumber = (number) => {
                                     <table class="min-w-full">
                                         <thead>
                                         <tr>
-                                            <th class="text-right py-2">کالا</th>
-                                            <th class="text-right py-2">فروخته شده</th>
-                                            <th class="text-right py-2">قابل برگشت</th>
-                                            <th class="text-right py-2" width="150px">تعداد مرجوعی</th>
+                                            <th class="text-right py-2 px-2">کالا</th>
+                                            <th class="text-right py-2 px-2">قیمت واحد ({{ activeCurrency.display_name }})</th>
+                                            <th class="text-right py-2 px-2">فروخته شده</th>
+                                            <th class="text-right py-2 px-2">قابل برگشت</th>
+                                            <th class="text-right py-2 px-2" width="150px">تعداد مرجوعی</th>
                                         </tr>
                                         </thead>
                                         <tbody>
                                         <tr v-for="(item, index) in form.items" :key="index" :class="{ 'bg-gray-100': item.returnable_quantity <= 0 }">
-                                            <td class="py-2">{{ item.name }}</td>
-                                            <td class="py-2">{{ item.original_quantity }}</td>
-                                            <td class="py-2 font-bold">{{ item.returnable_quantity }}</td>
-                                            <td class="py-2">
+                                            <td class="py-2 px-2">{{ item.name }}</td>
+                                            <td class="py-2 px-2">{{ formatNumber(item.unit_price) }}</td>
+                                            <td class="py-2 px-2">{{ item.original_quantity }}</td>
+                                            <td class="py-2 px-2 font-bold">{{ item.returnable_quantity }}</td>
+                                            <td class="py-2 px-2">
                                                 <input
                                                     type="number"
                                                     v-model="item.quantity"
-                                                    class="w-full text-left"
+                                                    class="w-full text-center border-gray-300 rounded-md shadow-sm"
                                                     min="0"
                                                     :max="item.returnable_quantity"
                                                     step="any"
@@ -110,11 +114,12 @@ const formatNumber = (number) => {
                                         </tr>
                                         </tbody>
                                     </table>
+                                    <div v-if="form.errors.items" class="text-sm text-red-600 mt-2">{{ form.errors.items }}</div>
                                 </div>
                             </div>
 
                             <div class="mt-6 border-t pt-4">
-                                <p class="text-lg font-bold">مبلغ کل برگشتی: {{ formatNumber(totalReturnAmount) }}</p>
+                                <p class="text-lg font-bold">مبلغ کل برگشتی: {{ formatNumber(totalReturnAmount) }} {{ activeCurrency.display_name }}</p>
                             </div>
 
                             <div class="mt-6">

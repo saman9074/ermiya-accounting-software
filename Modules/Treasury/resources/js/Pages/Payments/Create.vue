@@ -4,6 +4,8 @@ import { Head, useForm, Link } from '@inertiajs/vue3';
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
 import JalaliDatePicker from '@Core/Components/JalaliDatePicker.vue';
+import { useCurrency } from '@Core/composables/useCurrency';
+const { activeCurrency } = useCurrency();
 
 defineProps({
     accounts: Array,
@@ -49,8 +51,8 @@ const submit = () => {
                                     <JalaliDatePicker id="transaction_date" v-model="form.transaction_date" class="block w-full mt-1" required />
                                 </div>
                                 <div>
-                                    <label for="amount">مبلغ</label>
-                                    <input id="amount" type="number" v-model="form.amount" class="block w-full mt-1" required placeholder="مبلغ به ریال">
+                                    <label for="amount">مبلغ ({{ activeCurrency.display_name }})</label>
+                                    <input id="amount" type="number" v-model="form.amount" class="block w-full mt-1" required>
                                     <div v-if="form.errors.amount" class="text-sm text-red-600 mt-1">{{ form.errors.amount }}</div>
                                 </div>
                             </div>

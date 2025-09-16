@@ -14,7 +14,7 @@ use Modules\Persons\Models\Person;
 use Modules\Sales\Models\Invoice;
 use Modules\Sales\Models\InvoiceItem;
 use Modules\Treasury\Models\Account;
-
+use Modules\Core\Models\Currency;
 class SalesController extends Controller
 {
     public function index(Request $request)
@@ -62,12 +62,17 @@ class SalesController extends Controller
             'items.*.discount_value' => 'nullable|numeric|min:0',
             'discount_type' => 'nullable|in:percentage,amount',
             'discount_value' => 'nullable|numeric|min:0',
+            'notes' => 'nullable|string',
         ]);
 
-        $invoiceData = DB::transaction(function () use ($validated) {
+        $activeCurrency = Currency::where('is_active', true)->first();
+        $divisor = $activeCurrency ? $activeCurrency->divisor : 1;
+
+        $invoiceData = DB::transaction(function () use ($validated, $divisor) {
             $subtotalAmount = 0;
             $invoiceItemsData = [];
 
+            // ابتدا تمام محاسبات را انجام می‌دهیم و سپس مقادیر نهایی را به ریال تبدیل می‌کنیم
             foreach ($validated['items'] as $itemData) {
                 $itemSubtotal = $itemData['quantity'] * $itemData['unit_price'];
                 $discountAmount = 0;
@@ -76,6 +81,7 @@ class SalesController extends Controller
                     if ($itemData['discount_type'] === 'percentage') {
                         $discountAmount = ($itemSubtotal * $itemData['discount_value']) / 100;
                     } else {
+                        // تخفیف مبلغی برای هر واحد است
                         $discountAmount = $itemData['discount_value'] * $itemData['quantity'];
                     }
                 }
@@ -86,11 +92,12 @@ class SalesController extends Controller
                 $invoiceItemsData[] = [
                     'product_id' => $itemData['product_id'],
                     'quantity' => $itemData['quantity'],
-                    'unit_price' => $itemData['unit_price'],
+                    // تبدیل مبالغ هر آیتم به ریال
+                    'unit_price' => $itemData['unit_price'] * $divisor,
                     'discount_type' => $itemData['discount_type'] ?? null,
                     'discount_value' => $itemData['discount_value'] ?? 0,
-                    'discount_amount' => $discountAmount,
-                    'total_price' => $totalItemAmount, // **اصلاحیه اصلی**
+                    'discount_amount' => $discountAmount * $divisor,
+                    'total_price' => $totalItemAmount * $divisor,
                 ];
             }
 
@@ -109,13 +116,15 @@ class SalesController extends Controller
                 'person_id' => $validated['person_id'],
                 'issue_date' => $validated['issue_date'],
                 'due_date' => $validated['due_date'],
-                'subtotal_amount' => $subtotalAmount,
+                // تبدیل مبالغ نهایی فاکتور به ریال
+                'subtotal_amount' => $subtotalAmount * $divisor,
                 'discount_type' => $validated['discount_type'] ?? null,
                 'discount_value' => $validated['discount_value'] ?? 0,
-                'discount_amount' => $overallDiscountAmount,
-                'total_amount' => $finalTotalAmount,
+                'discount_amount' => $overallDiscountAmount * $divisor,
+                'total_amount' => $finalTotalAmount * $divisor,
                 'paid_amount' => 0,
                 'status' => 'unpaid',
+                'notes' => $validated['notes'] ?? null,
             ]);
 
             foreach ($invoiceItemsData as $itemData) {
@@ -162,5 +171,54 @@ class SalesController extends Controller
             'invoice' => $invoice,
             'companySettings' => $companySettings,
         ]);
+    }
+
+    public function receivePayment(Request $request, Invoice $invoice)
+    {
+        $validated = $request->validate([
+            'account_id' => 'required|exists:accounts,id',
+            'amount' => 'required|numeric|min:0.01',
+            'payment_date' => ['required', 'date', new DateWithinFinancialYear],
+            'description' => 'nullable|string',
+        ]);
+
+        $activeCurrency = Currency::where('is_active', true)->first();
+        $divisor = $activeCurrency ? $activeCurrency->divisor : 1;
+
+        // تبدیل مبلغ دریافتی به ریال
+        $paymentAmountInRials = $validated['amount'] * $divisor;
+
+        // اطمینان از اینکه مبلغ دریافتی از مانده فاکتور بیشتر نباشد
+        $remainingAmount = $invoice->total_amount - $invoice->paid_amount;
+        if ($paymentAmountInRials > $remainingAmount) {
+            return back()->withErrors(['amount' => 'مبلغ دریافتی نمی‌تواند از مانده فاکتور بیشتر باشد.']);
+        }
+
+        DB::transaction(function () use ($invoice, $validated, $paymentAmountInRials) {
+            // ۱. ثبت تراکنش مالی
+            $invoice->transactions()->create([
+                'account_id' => $validated['account_id'],
+                'type' => 'income',
+                'amount' => $paymentAmountInRials,
+                'transaction_date' => $validated['payment_date'],
+                'description' => $validated['description'] ?? 'دریافت وجه بابت فاکتور فروش شماره ' . $invoice->id,
+            ]);
+
+            // ۲. افزایش موجودی حساب بانکی/صندوق
+            $account = Account::find($validated['account_id']);
+            $account->increment('current_balance', $paymentAmountInRials);
+
+            // ۳. به‌روزرسانی مبلغ پرداخت شده فاکتور
+            $invoice->increment('paid_amount', $paymentAmountInRials);
+
+            // ۴. به‌روزرسانی وضعیت فاکتور
+            if ($invoice->paid_amount >= $invoice->total_amount) {
+                $invoice->update(['status' => 'paid']);
+            } else {
+                $invoice->update(['status' => 'partially_paid']);
+            }
+        });
+
+        return redirect()->route('invoices.show', $invoice->id)->with('success', 'دریافت وجه با موفقیت ثبت شد.');
     }
 }

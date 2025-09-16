@@ -3,7 +3,9 @@ import AuthenticatedLayout from '@Core/Layouts/AuthenticatedLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import ReceivePaymentModal from '@Sales/Components/ReceivePaymentModal.vue';
+import { useCurrency } from '@Core/composables/useCurrency';
 
+const { formatCurrency, activeCurrency } = useCurrency();
 const props = defineProps({
     invoice: Object,
     companySettings: Object,
@@ -116,9 +118,9 @@ const printInvoice = () => {
                                     <td class="py-3 px-4">{{ index + 1 }}</td>
                                     <td class="py-3 px-4">{{ item.product.name }}</td>
                                     <td class="py-3 px-4">{{ item.quantity }}</td>
-                                    <td class="py-3 px-4">{{ formatNumber(item.unit_price) }}</td>
-                                    <td class="py-3 px-4 text-red-600">{{ formatNumber(item.discount_amount) }}</td>
-                                    <td class="py-3 px-4 font-semibold">{{ formatNumber(item.total_price) }}</td>
+                                    <td class="py-3 px-4">{{ formatCurrency(item.unit_price) }}</td>
+                                    <td class="py-3 px-4 text-red-600">{{ formatCurrency(item.discount_amount) }}</td>
+                                    <td class="py-3 px-4 font-semibold">{{ formatCurrency(item.total_price) }}</td>
                                 </tr>
                                 </tbody>
                             </table>
@@ -128,23 +130,23 @@ const printInvoice = () => {
                             <div class="w-full max-w-sm">
                                 <div class="flex justify-between py-2">
                                     <span class="font-semibold">جمع آیتم‌ها:</span>
-                                    <span>{{ formatNumber(invoice.subtotal_amount) }}</span>
+                                    <span>{{ formatCurrency(invoice.subtotal_amount) }}</span>
                                 </div>
                                 <div v-if="invoice.discount_amount > 0" class="flex justify-between py-2 text-red-600">
                                     <span class="font-semibold">تخفیف کلی:</span>
-                                    <span>({{ formatNumber(invoice.discount_amount) }})</span>
+                                    <span>({{ formatCurrency(invoice.discount_amount) }})</span>
                                 </div>
                                 <div class="flex justify-between py-2 border-t-2 font-bold text-lg">
                                     <span class="font-semibold">مبلغ کل:</span>
-                                    <span>{{ formatNumber(invoice.total_amount) }}</span>
+                                    <span>{{ formatCurrency(invoice.total_amount) }}</span>
                                 </div>
                                 <div class="flex justify-between py-2 text-green-600">
                                     <span class="font-semibold">پرداخت شده:</span>
-                                    <span>{{ formatNumber(invoice.paid_amount) }}</span>
+                                    <span>{{ formatCurrency(invoice.paid_amount) }}</span>
                                 </div>
                                 <div class="flex justify-between py-2 bg-gray-100 px-4 rounded-md font-bold text-xl">
                                     <span class="font-semibold">مانده:</span>
-                                    <span>{{ formatNumber(invoice.total_amount - invoice.paid_amount) }}</span>
+                                    <span>{{ formatCurrency(invoice.total_amount - invoice.paid_amount) }}</span>
                                 </div>
                             </div>
                         </div>

@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Modules\Treasury\Models\Account;
+use Modules\Core\Models\Currency;
+
 class TreasuryController extends Controller
 {
     /**
@@ -47,6 +49,14 @@ class TreasuryController extends Controller
             'description' => 'nullable|string',
         ]);
 
+        $activeCurrency = Currency::where('is_active', true)->first();
+        $divisor = $activeCurrency ? $activeCurrency->divisor : 1;
+
+        // تبدیل موجودی اولیه به ریال قبل از ذخیره
+        if ($divisor > 1) {
+            $validated['initial_balance'] = ($validated['initial_balance'] ?? 0) * $divisor;
+        }
+
         // Set current_balance to initial_balance on creation
         $validated['current_balance'] = $validated['initial_balance'];
 
@@ -77,6 +87,17 @@ class TreasuryController extends Controller
             'initial_balance' => 'required|numeric|min:0',
             'description' => 'nullable|string',
         ]);
+
+        $activeCurrency = Currency::where('is_active', true)->first();
+        $divisor = $activeCurrency ? $activeCurrency->divisor : 1;
+
+        // تبدیل موجودی اولیه به ریال قبل از به‌روزرسانی
+        if ($divisor > 1) {
+            $validated['initial_balance'] = ($validated['initial_balance'] ?? 0) * $divisor;
+        }
+
+        $balanceDifference = $validated['initial_balance'] - $account->initial_balance;
+        $validated['current_balance'] = $account->current_balance + $balanceDifference;
 
         $account->update($validated);
 
