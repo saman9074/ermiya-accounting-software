@@ -3,6 +3,8 @@ import { useForm } from '@inertiajs/vue3';
 import { computed, watch } from 'vue';
 import { useCurrency } from '@Core/composables/useCurrency';
 import { onMounted } from 'vue';
+import JalaliDatePicker from '@Core/Components/JalaliDatePicker.vue';
+
 const { activeCurrency } = useCurrency();
 const props = defineProps({
     show: Boolean,
@@ -77,7 +79,7 @@ const submit = () => {
 
                     <div>
                         <label for="transaction_date" class="block font-medium text-sm text-gray-700">تاریخ دریافت</label>
-                        <input v-model="form.transaction_date" id="transaction_date" type="date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                        <JalaliDatePicker id="transaction_date" v-model="form.transaction_date" class="mt-1 block w-full" required />
                         <div v-if="form.errors.transaction_date" class="text-red-600 text-sm mt-1">{{ form.errors.transaction_date }}</div>
                     </div>
 

@@ -72,7 +72,13 @@ class DashboardController extends Controller
         }
 
 
+
+
         return Inertia::render('Core::Dashboard', [
+            'incomeToday' => Transaction::where('type', 'income')->whereDate('transaction_date', $today)->whereBetween('transaction_date', [$startDate, $endDate])->sum('amount'),
+            'overdueInvoices' => Invoice::where('payment_status', '!=', 'paid')->where('due_date', '<', $today)->whereBetween('issue_date', [$startDate, $endDate])->sum(DB::raw('total_amount - paid_amount')),
+            'expenseToday' => Transaction::where('type', 'expense')->whereDate('transaction_date', $today)->whereBetween('transaction_date', [$startDate, $endDate])->sum('amount'), // اصلاح این خط
+            'monthlyProfit' => 0,
             'stats' => $stats,
             'recentInvoices' => $recentInvoices ?? [],
             'chartData' => $chartData ?? ['labels' => [], 'values' => []],

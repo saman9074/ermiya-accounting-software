@@ -56,13 +56,26 @@ class SalesController extends Controller
             'due_date' => 'nullable|date|after_or_equal:issue_date',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.discount_type' => 'nullable|in:percentage,amount',
             'items.*.discount_value' => 'nullable|numeric|min:0',
             'discount_type' => 'nullable|in:percentage,amount',
             'discount_value' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
+            'items.*.quantity' => [
+                'required',
+                'numeric',
+                'min:0.01',
+                // اضافه کردن این قانون
+                function ($attribute, $value, $fail) use ($request) {
+                    $index = explode('.', $attribute)[1];
+                    $productId = $request->input("items.$index.product_id");
+                    $product = Product::find($productId);
+                    if ($product && $product->stock < $value) {
+                        $fail("موجودی کالای '{$product->name}' کافی نیست. موجودی فعلی: {$product->stock}");
+                    }
+                },
+            ],
         ]);
 
         $activeCurrency = Currency::where('is_active', true)->first();

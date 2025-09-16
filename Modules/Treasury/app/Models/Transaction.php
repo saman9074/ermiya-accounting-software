@@ -20,6 +20,8 @@ class Transaction extends Model
         'transaction_date',
         'expense_category_id',
         'description',
+        'payee_id',
+        'attachment',
     ];
 
     protected $casts = [

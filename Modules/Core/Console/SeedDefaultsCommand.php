@@ -25,11 +25,11 @@ class SeedDefaultsCommand extends Command
         $this->info('Seeding default application values...');
 
         // فراخوانی Seederهای هر ماژول
-        Artisan::call('module:seed', ['module' => 'Inventory', '--class' => 'UnitSeeder']);
-        $this->info('Default units seeded.');
-
         Artisan::call('module:seed', ['module' => 'Inventory', '--class' => 'PriceListSeeder']);
         $this->info('Default price lists seeded.');
+
+        Artisan::call('module:seed', ['module' => 'Inventory', '--class' => 'UnitSeeder']);
+        $this->info('Default units seeded.');
 
         // Seeder گروه اشخاص بعد از سطوح قیمت اجرا شود
         Artisan::call('module:seed', ['module' => 'Persons', '--class' => 'PersonGroupSeeder']);
@@ -37,6 +37,9 @@ class SeedDefaultsCommand extends Command
 
         Artisan::call('module:seed', ['module' => 'Treasury', '--class' => 'ExpenseCategorySeeder']);
         $this->info('Default expense categories seeded.');
+
+        Artisan::call('module:seed', ['module' => 'Core', '--class' => 'CurrencySeeder']);
+        $this->info('Default Currency seeded.');
 
         $this->info('All default values have been seeded successfully!');
 

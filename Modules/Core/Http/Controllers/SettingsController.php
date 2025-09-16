@@ -56,7 +56,7 @@ class SettingsController extends Controller
 
             // Store the new logo and save its path
             $path = $request->file('company_logo')->store('logos', 'public');
-            Setting::updateOrCreate(['key' => 'company_logo_path'], ['value' => $path]);
+            Setting::updateOrCreate(['key' => 'company_logo'], ['value' => $path]);
         }
         Cache::forget('app_settings');
 

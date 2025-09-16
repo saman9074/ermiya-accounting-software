@@ -42,10 +42,13 @@ class FinancialYearController extends Controller
             'name' => 'required|string|max:255|unique:financial_years,name',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
+            'is_active' => 'boolean',
         ]);
 
-        FinancialYear::create($validated);
-
+        $financialYear = FinancialYear::create($validated);
+        if ($request->input('is_active')) {
+            FinancialYear::setActive($financialYear);
+        }
         return redirect()->route('financial-years.index')->with('success', 'سال مالی با موفقیت ایجاد شد.');
     }
 
