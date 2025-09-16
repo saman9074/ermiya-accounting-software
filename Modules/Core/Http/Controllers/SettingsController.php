@@ -4,6 +4,7 @@ namespace Modules\Core\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Modules\Core\Models\Setting;
 use Illuminate\Support\Facades\Storage;
@@ -57,6 +58,7 @@ class SettingsController extends Controller
             $path = $request->file('company_logo')->store('logos', 'public');
             Setting::updateOrCreate(['key' => 'company_logo_path'], ['value' => $path]);
         }
+        Cache::forget('app_settings');
 
         return redirect()->route('settings.index')->with('success', 'تنظیمات با موفقیت ذخیره شد.');
     }

@@ -189,12 +189,10 @@ class SalesReturnController extends Controller
 
             // ۳. اصلاح ۲: به‌روزرسانی مجدد مبالغ و وضعیت فاکتور اصلی
             if ($invoice) {
-                // تمام تراکنش‌های باقیمانده (پرداختی‌ها و برگشتی‌های دیگر) را مجددا جمع می‌زنیم
                 $totalPaidAndReturns = $invoice->transactions()->where('type', 'income')->sum('amount');
                 $invoice->paid_amount = $totalPaidAndReturns;
 
-                // ارزیابی مجدد وضعیت فاکتور
-                if (abs($invoice->paid_amount - $invoice->total_amount) < 0.01) {
+                if (abs($invoice->paid_amount - $invoice->total_amount) < 0.01) { // Check for floating point inaccuracies
                     $invoice->status = 'paid';
                 } elseif ($invoice->paid_amount > 0) {
                     $invoice->status = 'partially_paid';

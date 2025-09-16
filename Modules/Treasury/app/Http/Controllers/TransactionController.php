@@ -155,12 +155,22 @@ class TransactionController extends Controller
                 // If it's an income (positive), subtracting it will decrease the balance.
                 $transaction->account->increment('current_balance', -$amountToRevert);
             }
-
             // Delete attachment if exists
             if ($transaction->attachment) {
                 Storage::disk('public')->delete($transaction->attachment);
             }
 
+            if ($transaction->transactionable_type === Invoice::class) {
+                $invoice = $transaction->transactionable;
+                $invoice->decrement('paid_amount', $transaction->amount);
+                // Update invoice status here as well, similar to the SalesReturn fix.
+                if ($invoice->paid_amount <= 0) {
+                    $invoice->status = 'unpaid';
+                } else {
+                    $invoice->status = 'partially_paid';
+                }
+                $invoice->save();
+            }
             $transaction->delete();
         });
 

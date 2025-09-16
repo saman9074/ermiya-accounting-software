@@ -4,12 +4,18 @@ namespace Modules\Core\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Route;
+use Modules\Core\Console\SeedDefaultsCommand;
+
 class CoreServiceProvider extends ServiceProvider
 {
     /**
      * Register the service provider.
      */
-    public function register(): void {}
+    public function register(): void {
+        $this->commands([
+            SeedDefaultsCommand::class,
+        ]);
+    }
 
     /**
      * Get the services provided by the provider.

@@ -37,5 +37,11 @@ class Category extends Model
         // This loads the children, and for each child, it also loads its children, and so on.
         return $this->children()->with('childrenRecursive');
     }
+
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
+    }
+
 }
 

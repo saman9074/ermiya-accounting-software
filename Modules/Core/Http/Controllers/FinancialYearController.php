@@ -51,15 +51,7 @@ class FinancialYearController extends Controller
 
     public function activate(FinancialYear $financialYear)
     {
-        // ===== منطق صحیح فعال‌سازی =====
-        DB::transaction(function () use ($financialYear) {
-            // ۱. همه سال‌های مالی دیگر را غیرفعال کن
-            FinancialYear::query()->update(['is_active' => false]);
-            // ۲. فقط سال مالی انتخاب شده را فعال کن
-            $financialYear->update(['is_active' => true]);
-        });
-        // ==============================
-
+        FinancialYear::setActive($financialYear);
         return redirect()->route('financial-years.index')->with('success', "سال مالی '{$financialYear->name}' با موفقیت فعال شد.");
     }
 

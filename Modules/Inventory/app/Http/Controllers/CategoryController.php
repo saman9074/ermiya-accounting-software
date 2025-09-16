@@ -80,6 +80,9 @@ class CategoryController extends Controller
 
     public function destroy(Category $category)
     {
+        if ($category->products()->exists()) {
+            return back()->with('error', 'امکان حذف این دسته‌بندی به دلیل وجود کالا در آن وجود ندارد.');
+        }
         $category->delete();
         return redirect()->route('categories.index');
     }

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 // use Modules\Core\Database\Factories\FinancialYearFactory;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Morilog\Jalali\Jalalian;
 
 class FinancialYear extends Model
@@ -79,6 +80,14 @@ class FinancialYear extends Model
         // The cache is automatically cleared by the 'booted' method events.
         return Cache::rememberForever('active_financial_year', function () {
             return self::where('is_active', true)->first();
+        });
+    }
+
+    public static function setActive(self $year): void
+    {
+        DB::transaction(function () use ($year) {
+            self::query()->update(['is_active' => false]);
+            $year->update(['is_active' => true]);
         });
     }
 }
