@@ -83,11 +83,18 @@ class FinancialYear extends Model
         });
     }
 
-    public static function setActive(self $year): void
+    public static function setActive(FinancialYear $financialYear)
     {
-        DB::transaction(function () use ($year) {
-            self::query()->update(['is_active' => false]);
-            $year->update(['is_active' => true]);
+        // از تراکنش دیتابیس برای اطمینان از صحت عملیات استفاده می‌کنیم
+        DB::transaction(function () use ($financialYear) {
+            // ۱. ابتدا تمام سال‌های مالی دیگر را غیرفعال می‌کنیم
+            self::where('id', '!=', $financialYear->id)
+                ->update(['is_active' => false]);
+
+            // ۲. سپس فقط سال مالی مورد نظر را فعال می‌کنیم
+            // استفاده از where('id', ...) و update مطمئن‌ترین روش است
+            self::where('id', $financialYear->id)
+                ->update(['is_active' => true]);
         });
     }
 }

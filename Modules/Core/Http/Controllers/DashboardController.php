@@ -14,74 +14,59 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $activeYear = FinancialYear::getActiveYear();
-        $stats = ['error' => null];
+        // ۱. ابتدا سال مالی فعال را پیدا کن
+        $activeFinancialYear = FinancialYear::where('is_active', true)->first();
 
-        if (!$activeYear) {
-            $stats['error'] = 'هیچ سال مالی فعالی تعریف نشده است. لطفا ابتدا یک سال مالی فعال ایجاد کنید.';
-        } else {
-            // Stats calculation
-            $today = now()->toDateString();
-            $startDate = $activeYear->start_date;
-            $endDate = $activeYear->end_date;
-
-            $stats = [
-                'incomeToday' => Transaction::where('type', 'income')->whereDate('transaction_date', $today)->whereBetween('transaction_date', [$startDate, $endDate])->sum('amount'),
-                'overdueInvoices' => Invoice::where('payment_status', '!=', 'paid')->where('due_date', '<', $today)->whereBetween('issue_date', [$startDate, $endDate])->sum(DB::raw('total_amount - paid_amount')),
-                // Add more stats as needed, e.g., expenses
-                'expenseToday' => 0, // Placeholder
-                'monthlyProfit' => 0, // Placeholder
-            ];
-
-            // Recent Invoices
-            $recentInvoices = Invoice::with('person')
-                ->whereBetween('issue_date', [$startDate, $endDate])
-                ->latest()
-                ->take(5)
-                ->get();
-
-            // Chart Data for the last 30 days within the financial year
-            $chartStartDate = now()->subDays(29)->max($startDate);
-            $chartEndDate = now()->min($endDate);
-
-            $salesData = Invoice::select(
-                DB::raw('DATE(issue_date) as date'),
-                DB::raw('SUM(total_amount) as total')
-            )
-                ->whereBetween('issue_date', [$chartStartDate, $chartEndDate])
-                ->groupBy('date')
-                ->orderBy('date', 'ASC')
-                ->get()
-                ->pluck('total', 'date');
-
-            $chartLabels = [];
-            $chartValues = [];
-            $currentDate = Carbon::parse($chartStartDate);
-
-            while ($currentDate <= $chartEndDate) {
-                $dateString = $currentDate->toDateString();
-                $chartLabels[] = jdate($dateString)->format('Y/m/d');
-                $chartValues[] = $salesData[$dateString] ?? 0;
-                $currentDate->addDay();
-            }
-
-            $chartData = [
-                'labels' => $chartLabels,
-                'values' => $chartValues,
-            ];
+        // ۲. اگر هیچ سال مالی فعالی وجود نداشت، کاربر را هدایت کن
+        if (!$activeFinancialYear) {
+            // این شرط از بروز خطا در دیتابیس خالی جلوگیری می‌کند
+            return redirect()->route('financial-years.create')
+                ->with('info', 'لطفا ابتدا یک سال مالی ایجاد و آن را فعال کنید.');
         }
 
+        // ۳. اگر سال مالی وجود داشت، محاسبات را انجام بده
+        $startDate = $activeFinancialYear->start_date;
+        $endDate = $activeFinancialYear->end_date;
+        $today = Carbon::today(); // <--- تعریف متغیر $today
 
+        $stats = [
+            'incomeToday' => Transaction::where('type', 'income')->whereDate('transaction_date', $today)->whereBetween('transaction_date', [$startDate, $endDate])->sum('amount'),
+            'overdueInvoices' => Invoice::where('status', '!=', 'paid')->where('due_date', '<', $today)->whereBetween('issue_date', [$startDate, $endDate])->sum(DB::raw('total_amount - paid_amount')),
+            'expenseToday' => Transaction::where('type', 'expense')->whereDate('transaction_date', $today)->whereBetween('transaction_date', [$startDate, $endDate])->sum('amount'),
+            'monthlyProfit' => 0, // Placeholder
+        ];
+
+        $recentInvoices = Invoice::with('person')
+            ->whereBetween('issue_date', [$startDate, $endDate])
+            ->latest()
+            ->take(5)
+            ->get();
+
+        $monthlySales = Invoice::select(
+            DB::raw('YEAR(issue_date) as year, MONTH(issue_date) as month'),
+            DB::raw('SUM(total_amount) as total')
+        )
+            ->whereBetween('issue_date', [$startDate, $endDate])
+            ->groupBy('year', 'month')
+            ->orderBy('year', 'asc')
+            ->orderBy('month', 'asc')
+            ->get();
+
+        // Prepare data for the chart
+        $labels = $monthlySales->map(function ($item) {
+            return Carbon::createFromDate($item->year, $item->month, 1)->format('F');
+        });
+
+        $data = $monthlySales->pluck('total');
 
 
         return Inertia::render('Core::Dashboard', [
-            'incomeToday' => Transaction::where('type', 'income')->whereDate('transaction_date', $today)->whereBetween('transaction_date', [$startDate, $endDate])->sum('amount'),
-            'overdueInvoices' => Invoice::where('payment_status', '!=', 'paid')->where('due_date', '<', $today)->whereBetween('issue_date', [$startDate, $endDate])->sum(DB::raw('total_amount - paid_amount')),
-            'expenseToday' => Transaction::where('type', 'expense')->whereDate('transaction_date', $today)->whereBetween('transaction_date', [$startDate, $endDate])->sum('amount'), // اصلاح این خط
-            'monthlyProfit' => 0,
             'stats' => $stats,
-            'recentInvoices' => $recentInvoices ?? [],
-            'chartData' => $chartData ?? ['labels' => [], 'values' => []],
+            'recentInvoices' => $recentInvoices,
+            'chartData' => [
+                'labels' => $labels,
+                'data' => $data,
+            ],
         ]);
     }
 }

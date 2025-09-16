@@ -36,19 +36,32 @@ class FinancialYearController extends Controller
         return Inertia::render('Core::FinancialYears/Create');
     }
 
+// کد صحیح و کامل
     public function store(Request $request)
     {
+        // ۱. فیلد is_active به اعتبارسنجی اضافه می‌شود
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:financial_years,name',
+            'name'       => 'required|string|max:255|unique:financial_years,name',
             'start_date' => 'required|date',
-            'end_date' => 'required|date|after:start_date',
-            'is_active' => 'boolean',
+            'end_date'   => 'required|date|after:start_date',
+            'is_active'  => 'nullable|boolean', // اطمینان از اینکه مقدار بولی است
         ]);
 
-        $financialYear = FinancialYear::create($validated);
-        if ($request->input('is_active')) {
+        // ۲. سال مالی جدید را ایجاد کرده و در یک متغیر ذخیره می‌کنیم
+        $financialYear = FinancialYear::create([
+            'name'       => $validated['name'],
+            'start_date' => $validated['start_date'],
+            'end_date'   => $validated['end_date'],
+            // مقدار is_active را مستقیما در زمان ایجاد روی false تنظیم می‌کنیم
+            // چون منطق فعال‌سازی در ادامه به صورت امن انجام می‌شود
+            'is_active'  => false,
+        ]);
+
+        // ۳. اگر تیک فعال‌سازی در فرم زده شده بود، آن را فعال می‌کنیم
+        if (!empty($validated['is_active']) && $validated['is_active'] === true) {
             FinancialYear::setActive($financialYear);
         }
+
         return redirect()->route('financial-years.index')->with('success', 'سال مالی با موفقیت ایجاد شد.');
     }
 
