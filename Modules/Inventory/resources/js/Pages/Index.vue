@@ -4,6 +4,9 @@ import Pagination from '@Core/Components/Pagination.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import { debounce } from 'lodash';
+import { useCurrency } from '@Core/composables/useCurrency';
+
+const { formatCurrency } = useCurrency();
 
 const props = defineProps({
     products: Object,
@@ -67,7 +70,7 @@ const deleteProduct = (id) => {
                                 <tbody class="bg-white divide-y divide-gray-200">
                                 <tr v-for="product in products.data" :key="product.id">
                                     <td class="px-6 py-4">{{ product.name }}</td>
-                                    <td class="px-6 py-4">{{ formatNumber(product.sale_price) }}</td>
+                                    <td class="px-6 py-4">{{ formatCurrency(product.sale_price) }}</td>
                                     <td class="px-6 py-4">{{ product.stock }}</td>
                                     <td class="px-6 py-4">{{ product.unit.name }}</td>
                                     <td class="px-6 py-4 text-left text-sm font-medium">

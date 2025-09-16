@@ -5,7 +5,7 @@ namespace Modules\Inventory\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-
+use Modules\Core\Models\Currency;
 // use Modules\Inventory\Database\Factories\ProductFactory;
 
 class Product extends Model

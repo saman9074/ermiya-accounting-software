@@ -4,7 +4,9 @@ import Pagination from '@Core/Components/Pagination.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import { debounce } from 'lodash';
+import { useCurrency } from '@Core/composables/useCurrency';
 
+const { formatCurrency } = useCurrency();
 const props = defineProps({
     salesReturns: Object,
     filters: Object,
@@ -79,7 +81,7 @@ const deleteReturn = (id) => {
                                         {{ sr.invoice_id }}
                                     </Link>
                                 </td>
-                                <td class="px-6 py-4">{{ formatNumber(sr.total_amount) }}</td>
+                                <td class="px-6 py-4">{{ formatCurrency(sr.total_amount) }}</td>
                                 <td class="px-6 py-4 text-left">
                                     <button @click="deleteReturn(sr.id)" class="text-red-600 hover:text-red-900">حذف</button>
                                 </td>

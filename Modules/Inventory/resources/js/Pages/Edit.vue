@@ -1,24 +1,32 @@
 <script setup>
 import AuthenticatedLayout from '@Core/Layouts/AuthenticatedLayout.vue';
 import { Head, useForm, Link } from '@inertiajs/vue3';
-import { onMounted } from 'vue';
+import {computed, onMounted} from 'vue';
 
 const props = defineProps({
     product: Object,
     categories: Array,
     units: Array,
     priceLists: Array,
+    activeCurrency: Object,
 });
+
+const divisor = computed(() => props.activeCurrency?.divisor || 1);
 
 const form = useForm({
     name: props.product.name,
     sku: props.product.sku,
-    purchase_price: props.product.purchase_price,
-    sale_price: props.product.sale_price,
+    purchase_price: props.product.purchase_price / divisor.value,
+    sale_price: props.product.sale_price / divisor.value,
     stock: props.product.stock,
     unit_id: props.product.unit_id,
     category_id: props.product.category_id,
     prices: [],
+    // props.priceLists.map(p => ({
+    //     price_list_id: p.price_list_id,
+    //     price: p.price / divisor.value,
+    //     name: p.name,
+    // })),
 });
 
 // Populate the prices array with existing values or defaults
@@ -28,7 +36,7 @@ onMounted(() => {
         return {
             price_list_id: pl.id,
             name: pl.name,
-            price: existingPrice ? existingPrice.price : 0,
+            price: existingPrice ? existingPrice.price / divisor.value : 0,
         };
     });
 });
@@ -90,11 +98,11 @@ const submit = () => {
                     <div class="card p-6 space-y-4">
                         <h2 class="text-lg font-medium text-gray-900 border-b pb-2">قیمت‌گذاری</h2>
                         <div>
-                            <label for="purchase_price" class="block font-medium text-sm text-gray-700">قیمت خرید</label>
+                            <label for="purchase_price" class="block font-medium text-sm text-gray-700">قیمت خرید ({{ activeCurrency.display_name }})</label>
                             <input v-model="form.purchase_price" id="purchase_price" type="number" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
                         </div>
                         <div>
-                            <label for="sale_price" class="block font-medium text-sm text-gray-700">قیمت فروش اصلی *</label>
+                            <label for="sale_price" class="block font-medium text-sm text-gray-700">قیمت فروش اصلی * ({{ activeCurrency.display_name }})</label>
                             <input v-model="form.sale_price" id="sale_price" type="number" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
                             <div v-if="form.errors.sale_price" class="text-red-600 text-sm mt-1">{{ form.errors.sale_price }}</div>
                         </div>
@@ -102,7 +110,7 @@ const submit = () => {
                         <div v-if="priceLists.length > 0" class="border-t pt-4 mt-4">
                             <h3 class="text-base font-medium text-gray-800 mb-2">سطوح قیمت دیگر</h3>
                             <div v-for="(price, index) in form.prices" :key="price.price_list_id" class="mt-2">
-                                <label :for="'price_' + price.price_list_id" class="block font-medium text-sm text-gray-700">{{ price.name }}</label>
+                                <label :for="'price_' + price.price_list_id" class="block font-medium text-sm text-gray-700">{{ form.prices[index].name }} ({{ activeCurrency.display_name }})</label>
                                 <input v-model="form.prices[index].price" :id="'price_' + price.price_list_id" type="number" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
                             </div>
                         </div>

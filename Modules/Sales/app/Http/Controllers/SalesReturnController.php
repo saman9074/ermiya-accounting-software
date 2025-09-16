@@ -12,14 +12,15 @@ use Modules\Sales\Models\Invoice;
 use Modules\Sales\Models\SalesReturn;
 use Modules\Treasury\Models\Transaction;
 use Modules\Sales\Models\SalesReturnItem;
+use Modules\Core\Models\Currency;
+use Modules\Core\Rules\DateWithinFinancialYear;
 
 class SalesReturnController extends Controller
 {
     public function create(Invoice $invoice)
     {
-        $invoice->load('items.product');
+        $invoice->load('items.product.unit');
 
-        // محاسبه تعداد کالاهایی که قبلا برگشت داده شده‌اند
         $previouslyReturnedItems = SalesReturnItem::whereHas('salesReturn', function ($query) use ($invoice) {
             $query->where('invoice_id', $invoice->id);
         })
@@ -28,7 +29,6 @@ class SalesReturnController extends Controller
             ->get()
             ->keyBy('product_id');
 
-        // اضافه کردن تعداد قابل برگشت به هر آیتم فاکتور
         $invoice->items->each(function ($item) use ($previouslyReturnedItems) {
             $returnedQty = $previouslyReturnedItems->get($item->product_id)->total_returned ?? 0;
             $item->returnable_quantity = $item->quantity - $returnedQty;
@@ -41,24 +41,18 @@ class SalesReturnController extends Controller
 
     public function store(Request $request)
     {
-
-
         $invoice = Invoice::findOrFail($request->input('invoice_id'));
 
-        // اعتبارسنجی سفارشی برای هر آیتم
         $request->validate([
             'invoice_id' => 'required|exists:invoices,id',
-            'return_date' => 'required|date',
+            'return_date' => ['required', 'date', new DateWithinFinancialYear],
             'description' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.quantity' => [
-                'required',
-                'numeric',
-                'min:0.01',
+                'required', 'numeric', 'min:0.01',
                 function ($attribute, $value, $fail) use ($request, $invoice) {
-                    // $attribute will be something like 'items.0.quantity'
                     $index = explode('.', $attribute)[1];
                     $productId = $request->input("items.$index.product_id");
 
@@ -82,60 +76,71 @@ class SalesReturnController extends Controller
             ],
         ]);
 
-        $validated = $request->all(); // all data is now validated
+        $validated = $request->all();
+        $activeCurrency = Currency::where('is_active', true)->first();
+        $divisor = $activeCurrency ? $activeCurrency->divisor : 1;
 
         $totalReturnAmount = collect($validated['items'])->sum(function ($item) {
             return $item['quantity'] * $item['unit_price'];
         });
 
-        $salesReturn = DB::transaction(function () use ($validated, $invoice, $totalReturnAmount) {
+        $totalReturnAmountInRials = $totalReturnAmount * $divisor;
 
-            // ۱. ایجاد سند اصلی برگشت از فروش
+        $salesReturn = DB::transaction(function () use ($validated, $invoice, $totalReturnAmountInRials, $divisor) {
+
             $salesReturn = SalesReturn::create([
                 'invoice_id' => $invoice->id,
                 'person_id' => $invoice->person_id,
                 'return_date' => $validated['return_date'],
-                'total_amount' => $totalReturnAmount,
+                'total_amount' => $totalReturnAmountInRials,
                 'description' => $validated['description'],
             ]);
 
             foreach ($validated['items'] as $itemData) {
-                // ۲. محاسبه مبلغ کل آیتم و ایجاد آیتم‌های برگشتی
                 $totalItemAmount = $itemData['quantity'] * $itemData['unit_price'];
 
                 $returnItem = $salesReturn->items()->create([
                     'product_id' => $itemData['product_id'],
                     'quantity' => $itemData['quantity'],
-                    'unit_price' => $itemData['unit_price'],
-                    'total_amount' => $totalItemAmount, // فیلد اصلاح شده
+                    'unit_price' => $itemData['unit_price'] * $divisor,
+                    'total_amount' => $totalItemAmount * $divisor,
                 ]);
 
                 $product = Product::find($itemData['product_id']);
-
-                // ۳. افزایش موجودی انبار
                 $newStock = $product->stock + $itemData['quantity'];
                 $product->update(['stock' => $newStock]);
 
-                // ۴. ثبت در کاردکس انبار
                 StockMovement::create([
                     'product_id' => $product->id,
                     'reference_id' => $returnItem->id,
-                    'reference_type' => SalesReturnItem::class, // استفاده از کلاس مدل
+                    'reference_type' => SalesReturnItem::class,
                     'type' => 'sale_return',
-                    'quantity_change' => $itemData['quantity'], // مقدار مثبت چون به انبار اضافه شده
+                    'quantity_change' => $itemData['quantity'],
                     'stock_after' => $newStock,
                 ]);
             }
 
-            // ۵. ایجاد تراکنش مالی برای بستانکار کردن حساب مشتری
-            // ما یک تراکنش از نوع درآمد با مبلغ منفی ثبت می‌کنیم که معادل اعتبار است
             $salesReturn->transactions()->create([
                 'type' => 'income',
-                'amount' => -$totalReturnAmount, // مبلغ منفی برای ایجاد اعتبار
+                'amount' => -$totalReturnAmountInRials,
                 'transaction_date' => $validated['return_date'],
                 'description' => 'بابت فاکتور برگشت از فروش شماره ' . $salesReturn->id,
-                'account_id' => null, // چون این یک اعتبار است و به حساب بانکی/صندوق واریز نشده
+                'account_id' => null,
             ]);
+
+            // به‌روزرسانی مجدد مبلغ پرداختی و وضعیت فاکتور اصلی
+            $totalPaid = $invoice->transactions()->where('type', 'income')->sum('amount') - $totalReturnAmountInRials;
+            $invoice->paid_amount = $totalPaid;
+
+            if (abs($invoice->paid_amount - $invoice->total_amount) < 0.01) {
+                $invoice->status = 'paid';
+            } elseif ($invoice->paid_amount > 0) {
+                $invoice->status = 'partially_paid';
+            } else {
+                $invoice->status = 'unpaid';
+            }
+            $invoice->save();
+
 
             return $salesReturn;
         });
@@ -166,27 +171,41 @@ class SalesReturnController extends Controller
     public function destroy(SalesReturn $salesReturn)
     {
         DB::transaction(function () use ($salesReturn) {
-            // ۱. برگرداندن موجودی انبار و حذف کاردکس
+            $invoice = $salesReturn->invoice; // <-- فاکتور مرجع را می‌گیریم
+
+            // ۱. برگرداندن موجودی انبار
             foreach ($salesReturn->items as $item) {
                 $product = $item->product;
-
-                // کاهش موجودی انبار
                 $newStock = $product->stock - $item->quantity;
                 $product->update(['stock' => $newStock]);
-
-                // حذف رکورد کاردکس مرتبط (اگر با cascade on delete حذف نشود)
                 StockMovement::where('reference_type', SalesReturnItem::class)
                     ->where('reference_id', $item->id)
                     ->delete();
             }
 
-            // ۲. حذف تراکنش مالی مرتبط
+            // ۲. حذف تراکنش مالی و خود سند
             $salesReturn->transactions()->delete();
-
-            // ۳. حذف خود سند (آیتم‌ها به دلیل cascade on delete خودکار حذف می‌شوند)
             $salesReturn->delete();
+
+            // ۳. اصلاح ۲: به‌روزرسانی مجدد مبالغ و وضعیت فاکتور اصلی
+            if ($invoice) {
+                // تمام تراکنش‌های باقیمانده (پرداختی‌ها و برگشتی‌های دیگر) را مجددا جمع می‌زنیم
+                $totalPaidAndReturns = $invoice->transactions()->where('type', 'income')->sum('amount');
+                $invoice->paid_amount = $totalPaidAndReturns;
+
+                // ارزیابی مجدد وضعیت فاکتور
+                if (abs($invoice->paid_amount - $invoice->total_amount) < 0.01) {
+                    $invoice->status = 'paid';
+                } elseif ($invoice->paid_amount > 0) {
+                    $invoice->status = 'partially_paid';
+                } else {
+                    $invoice->status = 'unpaid';
+                }
+                $invoice->save();
+            }
         });
 
-        return redirect()->route('sales_returns.index')->with('success', 'سند برگشت از فروش با موفقیت حذف شد.');
+        // اصلاح ۳: ریدایرکت به صفحه نمایش فاکتور
+        return redirect()->route('invoices.show', $salesReturn->invoice_id)->with('success', 'سند برگشت از فروش با موفقیت حذف شد.');
     }
 }

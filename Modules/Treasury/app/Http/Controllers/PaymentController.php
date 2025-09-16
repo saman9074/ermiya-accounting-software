@@ -9,6 +9,7 @@ use Modules\Treasury\Models\Account;
 use Modules\Treasury\Models\ExpenseCategory;
 use Modules\Treasury\Models\Payee;
 use Modules\Treasury\Models\Transaction;
+use Modules\Core\Models\Currency;
 
 class PaymentController extends Controller
 {
@@ -32,6 +33,15 @@ class PaymentController extends Controller
             'description' => 'nullable|string',
             'attachment' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
         ]);
+
+        $activeCurrency = Currency::where('is_active', true)->first();
+        $divisor = $activeCurrency ? $activeCurrency->divisor : 1;
+
+        // تبدیل مبلغ به ریال قبل از ذخیره
+        if ($divisor > 1) {
+            $validated['amount'] = ($validated['amount'] ?? 0) * $divisor;
+        }
+
 
         DB::transaction(function () use ($validated, $request) {
             $path = null;

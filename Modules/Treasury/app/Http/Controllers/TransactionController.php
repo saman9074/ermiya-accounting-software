@@ -12,6 +12,7 @@ use Modules\Treasury\Models\Transaction;
 use Modules\Treasury\Models\Account;
 use Inertia\Inertia;
 use Modules\Core\Rules\DateWithinFinancialYear;
+use Modules\Core\Models\Currency;
 
 class TransactionController extends Controller
 {
@@ -94,6 +95,15 @@ class TransactionController extends Controller
             'description' => 'nullable|string',
             'attachment' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
         ]);
+
+        $activeCurrency = Currency::where('is_active', true)->first();
+        $divisor = $activeCurrency ? $activeCurrency->divisor : 1;
+
+
+        // تبدیل مبلغ جدید به ریال
+        if ($divisor > 1) {
+            $validated['amount'] = ($validated['amount'] ?? 0) * $divisor;
+        }
 
         // Note: Reversing old transaction and creating a new one is safer for complex accounting.
         // For simplicity, we are updating in-place.

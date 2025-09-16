@@ -1,7 +1,9 @@
 <script setup>
 import { useForm } from '@inertiajs/vue3';
 import { computed, watch } from 'vue';
-
+import { useCurrency } from '@Core/composables/useCurrency';
+import { onMounted } from 'vue';
+const { activeCurrency } = useCurrency();
 const props = defineProps({
     show: Boolean,
     invoice: Object,
@@ -21,6 +23,12 @@ const form = useForm({
 const closeModal = () => {
     emit('close');
 };
+
+onMounted(() => {
+    if (activeCurrency.value && activeCurrency.value.divisor > 1) {
+        form.amount = (props.invoice.total_amount - props.invoice.paid_amount) / activeCurrency.value.divisor;
+    }
+});
 
 const remainingAmount = computed(() => {
     return props.invoice.total_amount - props.invoice.paid_amount;
@@ -54,7 +62,7 @@ const submit = () => {
 
                 <form @submit.prevent="submit" class="mt-6 space-y-4">
                     <div>
-                        <label for="amount" class="block font-medium text-sm text-gray-700">مبلغ دریافتی</label>
+                        <label for="amount" class="block font-medium text-sm text-gray-700">مبلغ دریافتی ({{ activeCurrency.display_name }})</label>
                         <input v-model="form.amount" id="amount" type="number" step="any" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
                         <div v-if="form.errors.amount" class="text-red-600 text-sm mt-1">{{ form.errors.amount }}</div>
                     </div>

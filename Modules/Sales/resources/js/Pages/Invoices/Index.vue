@@ -4,7 +4,9 @@ import Pagination from '@Core/Components/Pagination.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import { debounce } from 'lodash';
+import { useCurrency } from '@Core/composables/useCurrency';
 
+const { formatCurrency } = useCurrency();
 const props = defineProps({
     invoices: Object,
     filters: Object,
@@ -73,7 +75,7 @@ const formatNumber = (number) => {
                                     <td class="px-6 py-4">{{ invoice.id }}</td>
                                     <td class="px-6 py-4">{{ invoice.person.name }}</td>
                                     <td class="px-6 py-4">{{ formatDate(invoice.issue_date) }}</td>
-                                    <td class="px-6 py-4">{{ formatNumber(invoice.total_amount) }}</td>
+                                    <td class="px-6 py-4">{{ formatCurrency(invoice.total_amount) }}</td>
                                     <td class="px-6 py-4">{{ invoice.translated_status }}</td>
                                     <td class="px-6 py-4 text-left">
                                         <Link :href="route('invoices.show', invoice.id)" class="text-indigo-600 hover:text-indigo-900">

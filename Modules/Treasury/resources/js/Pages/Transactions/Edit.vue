@@ -3,6 +3,8 @@ import AuthenticatedLayout from '@Core/Layouts/AuthenticatedLayout.vue';
 import { Head, useForm, Link } from '@inertiajs/vue3';
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
+import { useCurrency } from '@Core/composables/useCurrency';
+import { onMounted } from 'vue';
 
 const props = defineProps({
     transaction: Object,
@@ -10,6 +12,8 @@ const props = defineProps({
     categories: Array,
     payees: Array,
 });
+
+const { activeCurrency } = useCurrency();
 
 const form = useForm({
     _method: 'put', // Important for file uploads with PUT/PATCH
@@ -20,6 +24,12 @@ const form = useForm({
     amount: Math.abs(props.transaction.amount),
     description: props.transaction.description,
     attachment: null, // New file to upload
+});
+
+onMounted(() => {
+    if (activeCurrency.value && activeCurrency.value.divisor > 1) {
+        form.amount = props.transaction.amount / activeCurrency.value.divisor;
+    }
 });
 
 const onFileChange = (e) => {
@@ -51,7 +61,7 @@ const submit = () => {
                                     <input type="date" v-model="form.transaction_date" class="block w-full mt-1" required>
                                 </div>
                                 <div>
-                                    <label>مبلغ</label>
+                                    <label>مبلغ ({{ activeCurrency.display_name }})</label>
                                     <input type="number" v-model="form.amount" class="block w-full mt-1" required>
                                 </div>
                             </div>

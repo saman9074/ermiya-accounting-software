@@ -14,6 +14,8 @@ import {
     Legend,
     Filler
 } from 'chart.js';
+import { useCurrency } from '@Core/composables/useCurrency';
+const { formatCurrency } = useCurrency();
 
 ChartJS.register(
     CategoryScale,
@@ -31,10 +33,6 @@ const props = defineProps({
     recentInvoices: Array,
     chartData: Object,
 });
-
-const formatCurrency = (value) => {
-    return new Intl.NumberFormat('fa-IR').format(value || 0);
-};
 
 const chartOptions = computed(() => ({
     responsive: true,
@@ -118,25 +116,25 @@ const chartJsData = computed(() => ({
                 <div class="card">
                     <div class="text-slate-500">درآمد امروز</div>
                     <div class="mt-1">
-                        <div class="text-2xl font-bold text-slate-800">{{ formatCurrency(stats.incomeToday) }} تومان</div>
+                        <div class="text-2xl font-bold text-slate-800">{{ formatCurrency(stats.incomeToday) }}</div>
                     </div>
                 </div>
                 <div class="card">
                     <div class="text-slate-500">هزینه امروز</div>
                     <div class="mt-1">
-                        <div class="text-2xl font-bold text-slate-800">{{ formatCurrency(stats.expenseToday) }} تومان</div>
+                        <div class="text-2xl font-bold text-slate-800">{{ formatCurrency(stats.expenseToday) }}</div>
                     </div>
                 </div>
                 <div class="card">
                     <div class="text-slate-500">سود خالص ماه</div>
                     <div class="mt-1">
-                        <div class="text-2xl font-bold text-slate-800">{{ formatCurrency(stats.monthlyProfit) }} تومان</div>
+                        <div class="text-2xl font-bold text-slate-800">{{ formatCurrency(stats.monthlyProfit) }}</div>
                     </div>
                 </div>
                 <div class="card">
                     <div class="text-slate-500">بدهی‌های معوق</div>
                     <div class="mt-1">
-                        <div class="text-2xl font-bold text-slate-800">{{ formatCurrency(stats.overdueInvoices) }} تومان</div>
+                        <div class="text-2xl font-bold text-slate-800">{{ formatCurrency(stats.overdueInvoices) }}</div>
                     </div>
                 </div>
             </section>

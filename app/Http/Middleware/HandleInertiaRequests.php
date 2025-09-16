@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache; // <--- ایمپورت کردن کش
 use Inertia\Middleware;
 use Modules\Core\Models\Setting; // <--- ایمپورت کردن مدل تنظیمات
+use Modules\Core\Models\Currency;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -34,6 +35,7 @@ class HandleInertiaRequests extends Middleware
         // ما منطق جدید را با منطق پیش‌فرض ترکیب می‌کنیم
         return [
             ...parent::share($request),
+            'active_currency' => fn () => Currency::where('is_active', true)->first(), // <-- ارسال ارز فعال به همه جا
             'auth' => [
                 // به جای ارسال کل آبجکت کاربر، فقط فیلدهای لازم را می‌فرستیم
                 'user' => $request->user() ? $request->user()->only('id', 'name', 'email') : null,

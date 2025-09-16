@@ -7,16 +7,18 @@ use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Modules\Core\Models\Setting;
 use Illuminate\Support\Facades\Storage;
+use Modules\Core\Models\Currency;
+use Illuminate\Support\Facades\DB;
+
 
 class SettingsController extends Controller
 {
     public function index()
     {
-        // Retrieve all settings and format them as a simple key => value array
-        $settings = Setting::all()->pluck('value', 'key');
-
         return Inertia::render('Core::Settings/Index', [
-            'settings' => $settings,
+            'settings' => Setting::all()->pluck('value', 'key'),
+            'currencies' => Currency::all(), // <-- ارسال لیست ارزها
+            'active_currency_id' => Currency::where('is_active', true)->first()?->id, // <-- ارسال ارز فعال
         ]);
     }
 
@@ -28,6 +30,7 @@ class SettingsController extends Controller
             'company_phone' => 'nullable|string|max:20',
             'company_logo' => 'nullable|image|max:1024',
             'default_print_size' => 'nullable|string|in:A4,A5,Thermal',
+            'active_currency_id' => 'required|exists:currencies,id',
         ]);
 
         // Update or create text-based settings
@@ -36,6 +39,11 @@ class SettingsController extends Controller
                 Setting::updateOrCreate(['key' => $key], ['value' => $value ?? '']);
             }
         }
+
+        DB::transaction(function () use ($validated) {
+            Currency::query()->update(['is_active' => false]);
+            Currency::find($validated['active_currency_id'])->update(['is_active' => true]);
+        });
 
         // Handle logo upload
         if ($request->hasFile('company_logo')) {

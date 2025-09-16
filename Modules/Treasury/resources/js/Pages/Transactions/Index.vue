@@ -4,6 +4,8 @@ import Pagination from '@Core/Components/Pagination.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import { debounce } from 'lodash';
+import { useCurrency } from '@Core/composables/useCurrency';
+const { formatCurrency } = useCurrency();
 
 const props = defineProps({
     transactions: Object,
@@ -29,7 +31,6 @@ const deleteTransaction = (id) => {
 };
 
 const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('fa-IR') : '';
-const formatCurrency = (amount) => new Number(amount).toLocaleString('fa-IR');
 const transactionTypeClass = (tx) => {
     if (tx.amount < 0 && tx.type === 'income') return 'text-purple-600';
     return tx.type === 'income' ? 'text-green-600' : 'text-red-600';

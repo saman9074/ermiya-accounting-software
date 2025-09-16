@@ -4,7 +4,8 @@ import Pagination from '@Core/Components/Pagination.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import { debounce } from 'lodash';
-
+import { useCurrency } from '@Core/composables/useCurrency';
+const { formatCurrency, activeCurrency } = useCurrency();
 const props = defineProps({
     accounts: Object,
     filters: Object,
@@ -20,9 +21,7 @@ watch(search, debounce((value) => {
     });
 }, 300));
 
-const formatCurrency = (amount) => {
-    return new Number(amount).toLocaleString('fa-IR');
-};
+
 </script>
 
 <template>
@@ -53,7 +52,7 @@ const formatCurrency = (amount) => {
                             <tr>
                                 <th class="px-6 py-3 text-right">نام حساب</th>
                                 <th class="px-6 py-3 text-right">نوع</th>
-                                <th class="px-6 py-3 text-right">موجودی فعلی</th>
+                                <th class="px-6 py-3 text-right">موجودی فعلی ({{ activeCurrency.symbol }})</th>
                                 <th class="px-6 py-3 text-left">عملیات</th>
                             </tr>
                             </thead>

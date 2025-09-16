@@ -2,6 +2,9 @@
 import AuthenticatedLayout from '@Core/Layouts/AuthenticatedLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import { defineProps } from 'vue';
+import { useCurrency } from '@Core/composables/useCurrency';
+
+const { formatCurrency } = useCurrency();
 
 const props = defineProps({
     person: Object,
@@ -61,9 +64,9 @@ const formatNumber = (number) => {
                                 <tr v-for="invoice in invoices" :key="invoice.id">
                                     <td class="px-6 py-4 whitespace-nowrap">{{ invoice.id }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap">{{ formatDate(invoice.issue_date) }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap">{{ formatNumber(invoice.total_amount) }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap">{{ formatNumber(invoice.paid_amount) }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap font-bold">{{ formatNumber(invoice.total_amount - invoice.paid_amount) }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">{{ formatCurrency(invoice.total_amount) }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">{{ formatCurrency(invoice.paid_amount) }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap font-bold">{{ formatCurrency(invoice.total_amount - invoice.paid_amount) }}</td>
                                 </tr>
                                 <tr v-if="!invoices.length">
                                     <td class="px-6 py-4 text-center" colspan="5">هیچ فاکتوری یافت نشد.</td>
@@ -74,9 +77,9 @@ const formatNumber = (number) => {
 
                         <div class="mt-8 p-4 border-t border-gray-200">
                             <div class="grid grid-cols-3 gap-4 text-lg">
-                                <div>جمع کل فاکتورها: <span class="font-bold">{{ formatNumber(total_invoices) }}</span></div>
-                                <div>جمع کل پرداختی‌ها: <span class="font-bold text-green-600">{{ formatNumber(total_paid) }}</span></div>
-                                <div>مانده نهایی حساب: <span class="font-bold text-red-600">{{ formatNumber(balance) }}</span></div>
+                                <div>جمع کل فاکتورها: <span class="font-bold">{{ formatCurrency(total_invoices) }}</span></div>
+                                <div>جمع کل پرداختی‌ها: <span class="font-bold text-green-600">{{ formatCurrency(total_paid) }}</span></div>
+                                <div>مانده نهایی حساب: <span class="font-bold text-red-600">{{ formatCurrency(balance) }}</span></div>
                             </div>
                         </div>
 

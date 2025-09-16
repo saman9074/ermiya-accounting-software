@@ -11,6 +11,7 @@ use Modules\Inventory\Models\PriceList;
 use Modules\Inventory\Models\Product;
 use Modules\Inventory\Models\Unit;
 use Modules\Inventory\Models\StockMovement;
+use Modules\Core\Models\Currency;
 
 class InventoryController extends Controller
 {
@@ -66,6 +67,14 @@ class InventoryController extends Controller
         ]);
 
         DB::transaction(function () use ($validated) {
+            $activeCurrency = Currency::where('is_active', true)->first();
+            $divisor = $activeCurrency ? $activeCurrency->divisor : 1;
+
+            if ($divisor > 1) {
+                $validated['purchase_price'] = ($validated['purchase_price'] ?? 0) * $divisor;
+                $validated['sale_price'] = ($validated['sale_price'] ?? 0) * $divisor;
+            }
+
             $product = Product::create($validated);
 
             if (isset($validated['stock'])) {
@@ -83,7 +92,7 @@ class InventoryController extends Controller
                 foreach ($validated['prices'] as $priceData) {
                     $product->productPrices()->create([
                         'price_list_id' => $priceData['price_list_id'],
-                        'price' => $priceData['price'],
+                        'price' => ($priceData['price'] ?? 0) * ($divisor > 1 ? $divisor : 1),
                     ]);
                 }
             }
@@ -105,6 +114,7 @@ class InventoryController extends Controller
             'categories' => Category::all(),
             'units' => Unit::all(),
             'priceLists' => PriceList::all(),
+            'activeCurrency' => Currency::where('is_active', true)->first(),
         ]);
     }
 
@@ -127,6 +137,13 @@ class InventoryController extends Controller
         ]);
 
         DB::transaction(function () use ($validated, $product) {
+            $activeCurrency = Currency::where('is_active', true)->first();
+            $divisor = $activeCurrency ? $activeCurrency->divisor : 1;
+
+            if ($divisor > 1) {
+                $validated['purchase_price'] = ($validated['purchase_price'] ?? 0) * $divisor;
+                $validated['sale_price'] = ($validated['sale_price'] ?? 0) * $divisor;
+            }
             $product->update($validated);
 
             // Sync product prices
@@ -135,7 +152,7 @@ class InventoryController extends Controller
                 foreach ($validated['prices'] as $priceData) {
                     $product->productPrices()->create([
                         'price_list_id' => $priceData['price_list_id'],
-                        'price' => $priceData['price'],
+                        'price' => ($priceData['price'] ?? 0) * ($divisor > 1 ? $divisor : 1),
                     ]);
                 }
             }
