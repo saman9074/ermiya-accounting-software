@@ -5,6 +5,7 @@ namespace Modules\Sales\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Modules\Core\Models\Setting;
 use Modules\Core\Rules\DateWithinFinancialYear;
@@ -13,8 +14,12 @@ use Modules\Inventory\Models\StockMovement;
 use Modules\Persons\Models\Person;
 use Modules\Sales\Models\Invoice;
 use Modules\Sales\Models\InvoiceItem;
+use Modules\Sales\Models\SalesReturn;
 use Modules\Treasury\Models\Account;
 use Modules\Core\Models\Currency;
+use Modules\Treasury\Models\Transaction;
+use Symfony\Component\Console\Logger\ConsoleLogger;
+
 class SalesController extends Controller
 {
     public function index(Request $request)
@@ -166,12 +171,39 @@ class SalesController extends Controller
     public function show(Invoice $invoice)
     {
         $invoice->load(['person', 'items.product']);
-        $companySettings = \Modules\Core\Models\Setting::all()->pluck('value', 'key');
+        $companySettings = Setting::all()->pluck('value', 'key');
+        $accounts = Account::all();
+        $person = $invoice->person;
+
+        // --- شروع بلوک کد نهایی و کاملاً اصلاح شده ---
+
+        $total_available_credit = 0;
+
+        // ۱. تمام فاکتورهای شخص را به همراه روابط واکشی می‌کنیم
+        $all_invoices = $person->invoices()->with(['transactions', 'salesReturns'])->get();
+
+        // ۲. به ازای هر فاکتور، محاسبه می‌کنیم که آیا بستانکاری مازادی ایجاد کرده است یا خیر
+        foreach ($all_invoices as $inv) {
+            // مبلغ قابل پرداخت نهایی این فاکتور (با کسر مرجوعی)
+            $net_payable = $inv->total_amount - $inv->salesReturns->sum('total_amount');
+
+            // کل مبالغ پرداختی مثبت برای این فاکتور
+            $total_paid = $inv->transactions->where('type', 'income')->where('amount', '>', 0)->sum('amount');
+
+            // اگر مبلغ پرداخت شده از مبلغ قابل پرداخت نهایی بیشتر باشد، این مازاد یک اعتبار است
+            $credit_from_this_invoice = $total_paid - $net_payable;
+            if ($credit_from_this_invoice > 0) {
+                $total_available_credit += $credit_from_this_invoice;
+            }
+        }
+
+        // --- پایان بلوک ---
 
         return Inertia::render('Sales::Invoices/Show', [
-            'invoice' => $invoice,
+            'invoice'         => $invoice,
             'companySettings' => $companySettings,
-            'accounts' => Account::all(),
+            'accounts'        => $accounts,
+            'personCredit'    => $total_available_credit, // ارسال اعتبار محاسبه شده صحیح
         ]);
     }
 

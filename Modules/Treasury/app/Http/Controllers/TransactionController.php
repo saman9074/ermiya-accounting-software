@@ -37,42 +37,64 @@ class TransactionController extends Controller
 
     public function store(Request $request)
     {
-        $invoice = Invoice::findOrFail($request->input('invoice_id'));
-
-        $request->validate([
-            'account_id' => 'required|exists:accounts,id',
-            'amount' => ['required', 'numeric', 'min:0.01', 'max:' . $invoice->remaining_amount],
-            'transaction_date' => ['required', 'date', new DateWithinFinancialYear], // <-- از قانون جدید استفاده می‌کنیم
-            'invoice_id' => 'required|exists:invoices,id',
+        $validated = $request->validate([
+            'account_id' => 'required_if:amount,>,0|nullable|exists:accounts,id', // فقط اگر وجه نقدی دریافت می‌شود، حساب اجباری است
+            'amount' => 'required|numeric|min:0', // می‌تواند صفر باشد اگر فقط از اعتبار استفاده شود
+            'apply_credit' => 'required|numeric|min:0', // مبلغ استفاده از اعتبار
+            'transaction_date' => 'required|date',
             'description' => 'nullable|string',
+            'invoice_id' => 'required|exists:invoices,id'
         ]);
 
-        DB::transaction(function () use ($request, $invoice) {
-            // 1. Create the transaction record
-            $transaction = $invoice->transactions()->create([
-                'account_id' => $request->input('account_id'),
-                'amount' => $request->input('amount'),
-                'type' => 'income',
-                'transaction_date' => $request->input('transaction_date'),
-                'description' => $request->input('description'),
-            ]);
+        $invoice = Invoice::findOrFail($request->invoice_id);
 
-            // 2. Update the account's current balance
-            $account = Account::find($request->input('account_id'));
-            $account->increment('current_balance', $transaction->amount);
+        // اطمینان از اینکه مجموع پرداخت و اعتبار از مانده فاکتور بیشتر نشود
+        $remainingBalance = $invoice->total_amount - $invoice->paid_amount;
+        if(($validated['amount'] + $validated['apply_credit']) > $remainingBalance) {
+            return back()->withErrors(['amount' => 'مجموع مبلغ پرداختی و اعتبار استفاده شده از مانده فاکتور بیشتر است.']);
+        }
 
-            // 3. Update the invoice's paid amount and status
-            $invoice->increment('paid_amount', $transaction->amount);
-            if ($invoice->paid_amount >= $invoice->total_amount) {
-                $invoice->payment_status = 'paid';
-            } else {
-                $invoice->payment_status = 'partial';
+        $activeCurrency = Currency::where('is_active', true)->first();
+        $divisor = $activeCurrency ? $activeCurrency->divisor : 1;
+
+        DB::transaction(function () use ($validated, $invoice, $divisor) {
+            // بخش اول: ثبت دریافت وجه نقد/بانکی (اگر وجود داشته باشد)
+            if ($validated['amount'] > 0) {
+                $amountInRials = $validated['amount'] * $divisor;
+                Transaction::create([
+                    'account_id' => $validated['account_id'],
+                    'type' => 'income',
+                    'amount' => $amountInRials,
+                    'transaction_date' => $validated['transaction_date'],
+                    'description' => $validated['description'],
+                    'transactionable_id' => $invoice->id,
+                    'transactionable_type' => Invoice::class,
+                ]);
+                // به‌روزرسانی موجودی حساب
+                Account::find($validated['account_id'])->increment('current_balance', $amountInRials);
             }
-            $invoice->save();
+
+            // بخش دوم: ثبت تراکنش استفاده از اعتبار (اگر وجود داشته باشد)
+            if ($validated['apply_credit'] > 0) {
+                $creditInRials = $validated['apply_credit'] * $divisor;
+                Transaction::create([
+                    'account_id' => null, // استفاده از اعتبار به حساب بانکی واریز نمی‌شود
+                    'type' => 'income',
+                    'amount' => $creditInRials, // این هم یک نوع "دریافتی" برای فاکتور محسوب می‌شود
+                    'transaction_date' => $validated['transaction_date'],
+                    'description' => 'استفاده از اعتبار بستانکاری برای فاکتور شماره ' . $invoice->id,
+                    'transactionable_id' => $invoice->id,
+                    'transactionable_type' => Invoice::class,
+                ]);
+            }
+
+            // در نهایت، وضعیت فاکتور را بر اساس تمام تراکنش‌های جدید و قدیم به‌روز کن
+            $invoice->updateStatus();
         });
 
-        return redirect()->route('invoices.show', $invoice)->with('success', 'دریافت وجه با موفقیت ثبت شد.');
+        return redirect()->route('invoices.show', $invoice->id)->with('success', 'عملیات پرداخت با موفقیت ثبت شد.');
     }
+
 
     public function edit(Transaction $transaction)
     {

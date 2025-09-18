@@ -23,6 +23,7 @@ const props = defineProps({
     invoice: Object,
     companySettings: Object,
     accounts: Array,
+    personCredit: Number,
 });
 
 const isPaymentModalOpen = ref(false);
@@ -94,6 +95,7 @@ const printInvoice = () => {
             :show="isPaymentModalOpen"
             :invoice="invoice"
             :accounts="accounts"
+            :person-credit="personCredit"
             @close="closePaymentModal"
         />
 

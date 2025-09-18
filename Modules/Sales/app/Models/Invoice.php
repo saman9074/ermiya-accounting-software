@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 // use Modules\Sales\Database\Factories\InvoiceFactory;
+use Modules\Sales\Models\SalesReturn;
 
 class Invoice extends Model
 {
@@ -77,5 +78,40 @@ class Invoice extends Model
             'returned' => 'مرجوعی',
             default => $this->status,
         };
+    }
+
+    public function updateStatus()
+    {
+        // رفرش کردن مدل برای دریافت آخرین داده‌ها
+        $this->refresh();
+
+        // ۱. مجموع تمام پرداخت‌های مثبت (دریافت وجه)
+        $totalPayments = $this->transactions()->where('type', 'income')->where('amount', '>', 0)->sum('amount');
+
+        // ۲. مجموع کل مبالغ مرجوعی
+        $totalReturned = $this->salesReturns()->sum('total_amount');
+
+        // ۳. مبلغ پرداختی نهایی فاکتور (پرداختی‌ها منهای برگشتی‌ها)
+        $this->paid_amount = $totalPayments - $totalReturned;
+
+        // ۴. تعیین وضعیت فاکتور با اولویت‌بندی صحیح
+        // اولویت اول: آیا فاکتور به طور کامل مرجوع شده است؟
+        if (abs($totalReturned - $this->total_amount) < 0.01) {
+            $this->status = 'returned';
+        }
+        // اولویت دوم: آیا فاکتور به طور کامل پرداخت شده است؟
+        elseif (abs($this->paid_amount - $this->total_amount) < 0.01) {
+            $this->status = 'paid';
+        }
+        // اولویت سوم: آیا بخشی از مبلغ پرداخت شده است؟
+        elseif ($this->paid_amount > 0.001) {
+            $this->status = 'partially_paid';
+        }
+        // در غیر این صورت، فاکتور پرداخت نشده است
+        else {
+            $this->status = 'unpaid';
+        }
+
+        $this->save();
     }
 }

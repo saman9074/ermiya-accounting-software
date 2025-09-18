@@ -11,6 +11,7 @@ use Modules\Persons\Models\Person;
 use Modules\Persons\Models\PersonGroup;
 use Modules\Sales\Models\Invoice;
 use Modules\Treasury\Models\Transaction;
+use Modules\Sales\Models\SalesReturn;
 
 class PersonsController extends Controller
 {
@@ -86,23 +87,41 @@ class PersonsController extends Controller
 
     public function statement(Person $person)
     {
-        // دریافت تمام فاکتورهای شخص
-        $invoices = $person->invoices()->with('items')->get();
+        // ۱. تمام فاکتورهای شخص را به همراه روابط واکشی می‌کنیم
+        $invoices = $person->invoices()->with(['transactions', 'salesReturns'])->latest()->get();
 
-        $invoiceIds = $person->invoices()->pluck('id');
-        $transactions = Transaction::whereIn('transactionable_id', $invoiceIds)
-            ->where('transactionable_type', Invoice::class)
-            ->get();
-        $total_invoices = $invoices->sum('total_amount');
-        $total_paid = $transactions->sum('amount'); // جمع جبری تراکنش‌ها
-        $balance = $total_invoices - $total_paid;
+        // --- شروع بلوک منطق نهایی و صحیح ---
+
+        // ۲. محاسبه مقادیر نمایشی برای هر سطر فاکتور در جدول
+        $invoices->each(function ($invoice) {
+            $invoice->returned_amount = $invoice->salesReturns->sum('total_amount');
+            $invoice->paid_positive_amount = $invoice->transactions->where('type', 'income')->where('amount', '>', 0)->sum('amount');
+            $net_payable = $invoice->total_amount - $invoice->returned_amount;
+            $invoice->invoice_balance = $net_payable - $invoice->paid_positive_amount;
+        });
+
+        // ۳. محاسبه مقادیر برای خلاصه نهایی کل حساب
+        $total_invoices_amount = $invoices->sum('total_amount');
+
+        // **مهم:** جمع جبری تمام تراکنش‌ها (پرداخت‌ها مثبت، برگشتی‌ها منفی)
+        $net_transactions_amount = Transaction::where('transactionable_type', (new Invoice)->getMorphClass())
+            ->whereIn('transactionable_id', $invoices->pluck('id'))
+            ->where('type', 'income')
+            ->sum('amount'); // sum تمام مقادیر (مثبت و منفی)
+
+        $final_balance = $total_invoices_amount - $net_transactions_amount;
+
+        // ۴. مقادیر نمایشی برای خلاصه حساب
+        $display_total_paid = $invoices->pluck('transactions')->flatten()->where('type', 'income')->where('amount', '>', 0)->sum('amount');
+        $display_total_returned = $invoices->sum('returned_amount');
 
         return Inertia::render('Persons::AccountStatement', [
-            'person' => $person,
-            'invoices' => $invoices,
-            'balance' => $balance,
-            'total_invoices' => $total_invoices,
-            'total_paid' => $total_paid
+            'person'           => $person,
+            'invoices'         => $invoices,
+            'total_invoices'   => $total_invoices_amount,
+            'total_paid'       => $display_total_paid,
+            'total_returned'   => $display_total_returned,
+            'balance'          => $final_balance,
         ]);
     }
 }
